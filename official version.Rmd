@@ -28,6 +28,12 @@ library(httpuv)
 
 ```
 
+# literature importante
+
+- clean the tweet : https://towardsdatascience.com/text-mining-with-r-gathering-and-cleaning-data-8f8b0d65e67c 
+- set your twitter API : https://www.infoworld.com/article/3515712/how-to-search-twitter-with-rtweet-and-r.html  
+- scrapp by hashtag or region or user : https://cran.r-project.org/web/packages/rtweet/vignettes/intro.html 
+
 # 1. connect to API twitter
 
 #only run this now if the point 2 is not done yet. 

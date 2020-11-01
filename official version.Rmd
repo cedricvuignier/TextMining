@@ -1,0 +1,257 @@
+---
+title: "essai"
+author: "Cédric Vuignier"
+date: "10/29/2020"
+output: html_document
+---
+
+```{r include=FALSE}
+library(graphics)
+library(textclean)
+library(stringr)
+library(purrr)
+library(rlang)
+library(dplyr)
+library(tibble)
+library(syuzhet)
+library(NLP)
+library(tm)
+library(rtweet)
+library(dplyr)
+library(reactable)
+
+if (!requireNamespace("httpuv", quietly = TRUE)) {
+  install.packages("httpuv")
+}
+
+library(httpuv)
+
+```
+
+# 1. connect to API twitter
+
+#only run this now if the point 2 is not done yet. 
+twitter log-in (need to register the account in the pop-up windows)
+name : textmining13
+mdp : textmining2020
+
+```{r include=FALSE}
+library(rtweet)
+get_token()
+
+```
+
+#3. no need to run the following code if you have already done this part. 
+## follow the instruction to link your twitter app with your R CONSOL. Do it only once. 
+```{r include=FALSE}
+## load rtweet
+library(rtweet)
+
+## store api keys (these are fake example values; replace with your own keys)
+api_key <- "cFRZi4lsJGD4DxrtLT24za5UH"
+api_secret_key <- "iHBlU1fA5WdQ17N3udi8FWg8TlwugXb8e6c34MNRGmKXNJFIQY"
+
+## authenticate via web browser
+token <- create_token(
+  app = "TextMiningHEC",
+  consumer_key = api_key,
+  consumer_secret = api_secret_key)
+
+#verify it
+
+token
+```
+
+# Get the tweets
+We collect the 3000 last tweets from TRUMP, JOE BIDEN, KAMALA HARRIS, MIKE PENCE
+the DF has 90 variable. It's too much. 
+
+Il faut le faire manuellement afin d'éviter la limite de tweet possible par requête (3200)
+```{r }
+#split the scrapping into two part to avoid the limit 
+
+#########REPUCLICAN#############################
+
+#we see that MIKE PENCE the vice president of donald trump doesn't tweet. He only retweet. so we scrap manually the Retweet for him
+tweet_trump <- get_timelines("realDonaldTrump", n = 3000, 
+            include_rts = FALSE)
+
+tweet_VP <- get_timelines("VP", n = 3000, 
+            include_rts = TRUE)
+
+#########DEMOCRATE#############################
+
+tweet_BIDEN <- get_timelines("JoeBiden", n = 3000, 
+            include_rts = FALSE)
+
+tweet_KAMALA <- get_timelines("KamalaHarris", n = 3000, 
+            include_rts = FALSE)
+```
+
+# explain the data
+
+we will only keep the variable *text*, *created at*, *retweet_count*, *favorite_count* and *display_text_width* in order to do some basics statistics analysis. 
+```{r }
+#TRUMP
+tweet_trump <- tweet_trump %>% 
+  select(text, created_at, retweet_count, favorite_count,display_text_width)
+#VP
+tweet_VP <- tweet_VP %>% 
+  select(text, created_at, retweet_count, favorite_count,display_text_width)
+#BIDEN
+tweet_BIDEN <- tweet_BIDEN %>% 
+  select(text, created_at, retweet_count, favorite_count,display_text_width)
+#KAMALA
+tweet_KAMALA <- tweet_KAMALA %>% 
+  select(text, created_at, retweet_count, favorite_count,display_text_width)
+
+
+#generate a shiny graph (trump)
+
+"reactable(tweet_trump, 
+          filterable = TRUE, searchable = TRUE, bordered = TRUE, 
+          striped = TRUE, highlight = TRUE,
+          defaultPageSize = 10, showPageSizeOptions = TRUE, 
+          showSortable = TRUE, pageSizeOptions = c(25, 50, 75, 100, 200), defaultSortOrder = "desc",
+            columns = list(
+            text = colDef(html = TRUE, minWidth = 190, resizable = TRUE),
+            created_at = colDef(defaultSortOrder = "asc"),
+            retweet_count = colDef(filterable =  FALSE),
+            favorite_count = colDef(filterable =  FALSE),
+            display_text_width = colDef(filterable =  FALSE)
+          )
+) "
+```
+after the table we could do some basics statistics for each account, hashtag analysed. (nb of characters, nb rt, nb like (favorite), etc...)
+
+#clean the data 
+diffult to read so we have to improve the data set. We have to remove a lot of useless information like:
+- URL
+- User
+- some emoji or special character
+
+only keep the text and transform it 
+```{r include=FALSE}
+#TRUMP#############################################
+#KEEP ONLY THE TWEET
+TRUMP <- tweet_trump %>% 
+  select(text)
+#not so readable, so we have to modify a bit our data structure.
+head(TRUMP)
+
+# Get the text column
+TRUMP <- TRUMP$text
+# Set the text to lowercase
+TRUMP <- tolower(TRUMP)
+# Remove mentions, urls, emojis, numbers, punctuations, etc.
+TRUMP <- gsub("@\\w+", "", TRUMP)
+TRUMP <- gsub("https?://.+", "", TRUMP)
+TRUMP <- gsub("\\d+\\w*\\d*", "", TRUMP)
+TRUMP <- gsub("#\\w+", "", TRUMP)
+TRUMP <- gsub("[^\x01-\x7F]", "", TRUMP)
+TRUMP <- gsub("[[:punct:]]", " ", TRUMP)
+# Remove spaces and newlines
+TRUMP <- gsub("\n", " ", TRUMP)
+TRUMP <- gsub("^\\s+", "", TRUMP)
+TRUMP <- gsub("\\s+$", "", TRUMP)
+TRUMP <- gsub("[ |\t]+", " ", TRUMP)
+#rename variable
+TRUMP <- as_tibble(TRUMP)
+# drop empty values
+TRUMP <- TRUMP[!(is.na(TRUMP$value) | TRUMP$value==""), ]
+
+#VP#############################################
+#BIDEN
+#KEEP ONLY THE TWEET
+VP <- tweet_VP %>% 
+  select(text)
+#not so readable, so we have to modify a bit our data structure.
+head(VP)
+
+# Get the text column
+VP <- VP$text
+# Set the text to lowercase
+VP <- tolower(VP)
+# Remove mentions, urls, emojis, numbers, punctuations, etc.
+VP <- gsub("@\\w+", "", VP)
+VP <- gsub("https?://.+", "", VP)
+VP <- gsub("\\d+\\w*\\d*", "", VP)
+VP <- gsub("#\\w+", "", VP)
+VP <- gsub("[^\x01-\x7F]", "", VP)
+VP <- gsub("[[:punct:]]", " ", VP)
+# Remove spaces and newlines
+VP <- gsub("\n", " ", VP)
+VP <- gsub("^\\s+", "", VP)
+VP <- gsub("\\s+$", "", VP)
+VP <- gsub("[ |\t]+", " ", VP)
+#rename variable
+VP <- as_tibble(VP)
+# drop empty values
+VP <- VP[!(is.na(VP$value) | VP$value==""), ]
+
+#BIDEN#############################################
+#KEEP ONLY THE TWEET
+BIDEN <- tweet_BIDEN %>% 
+  select(text)
+#not so readable, so we have to modify a bit our data structure.
+head(BIDEN)
+
+# Get the text column
+BIDEN <- BIDEN$text
+# Set the text to lowercase
+BIDEN <- tolower(BIDEN)
+# Remove mentions, urls, emojis, numbers, punctuations, etc.
+BIDEN <- gsub("@\\w+", "", BIDEN)
+BIDEN <- gsub("https?://.+", "", BIDEN)
+BIDEN <- gsub("\\d+\\w*\\d*", "", BIDEN)
+BIDEN <- gsub("#\\w+", "", BIDEN)
+BIDEN <- gsub("[^\x01-\x7F]", "", BIDEN)
+BIDEN <- gsub("[[:punct:]]", " ", BIDEN)
+# Remove spaces and newlines
+BIDEN <- gsub("\n", " ", BIDEN)
+BIDEN <- gsub("^\\s+", "", BIDEN)
+BIDEN <- gsub("\\s+$", "", BIDEN)
+BIDEN <- gsub("[ |\t]+", " ", BIDEN)
+#rename variable
+BIDEN <- as_tibble(BIDEN)
+# drop empty values
+BIDEN <- BIDEN[!(is.na(BIDEN$value) | BIDEN$value==""), ]
+
+#KAMALA#############################################
+#KEEP ONLY THE TWEET
+KAMALA <- tweet_KAMALA %>% 
+  select(text)
+#not so readable, so we have to modify a bit our data structure.
+head(KAMALA)
+
+# Get the text column
+KAMALA <- KAMALA$text
+# Set the text to lowercase
+KAMALA <- tolower(KAMALA)
+# Remove mentions, urls, emojis, numbers, punctuations, etc.
+KAMALA <- gsub("@\\w+", "", KAMALA)
+KAMALA <- gsub("https?://.+", "", KAMALA)
+KAMALA <- gsub("\\d+\\w*\\d*", "", KAMALA)
+KAMALA <- gsub("#\\w+", "", KAMALA)
+KAMALA <- gsub("[^\x01-\x7F]", "", KAMALA)
+KAMALA <- gsub("[[:punct:]]", " ", KAMALA)
+# Remove spaces and newlines
+KAMALA <- gsub("\n", " ", KAMALA)
+KAMALA <- gsub("^\\s+", "", KAMALA)
+KAMALA <- gsub("\\s+$", "", KAMALA)
+KAMALA <- gsub("[ |\t]+", " ", KAMALA)
+#rename variable
+KAMALA <- as_tibble(KAMALA)
+# drop empty values
+KAMALA <- KAMALA[!(is.na(KAMALA$value) | KAMALA$value==""), ]
+
+```
+
+#FINALY WE SAVE OUR DATAFRAME
+```{r}
+write.csv(TRUMP, file = "TRUMP_all_tweet.csv", row.names=FALSE)
+write.csv(VP, file = "VP_all_tweet.csv", row.names=FALSE)
+write.csv(BIDEN, file = "BIDEN_all_tweet.csv", row.names=FALSE)
+write.csv(KAMALA, file = "KAMALA_all_tweet.csv", row.names=FALSE)
+```
+

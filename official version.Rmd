@@ -340,3 +340,44 @@ write.csv(tweet_trump_hashtag, file = "hashtag_trump.csv", row.names=FALSE)
 write.csv(tweet_biden_hashtag, file = "hashtag_biden.csv", row.names=FALSE)
 ```
 
+# Analysis
+
+```{r}
+library(here)
+# library(readtext)
+library(foreign)
+library(quanteda)
+library(dplyr)
+f <- file.path(here("data/"), c("BIDEN_all_tweet.csv","KAMALA_all_tweet.csv", "TRUMP_all_tweet.csv", "VP_all_tweet.csv"))
+d <- lapply(f, read.csv)
+str(d, give.attr = FALSE)
+
+d <- Map(cbind, d, name = c("Biden", "Kamala", "Trump", "VP"))
+
+test<- rbind(d[[1]], d[[2]], d[[3]], d[[4]])
+test<- tibble(test)
+
+
+test2 <- as.character(as.vector(test[,1])) 
+tweets.corpus <- corpus(test2)
+
+tweets.tokens <- tokens(tweets.corpus, 
+                        remove_punct = TRUE, 
+                        remove_symbols = TRUE, 
+                        remove_url = TRUE,
+                        what="word1") ## option for removing hastags and tags symbols (@, #, etc.)
+
+tweets.tokens <- tokens_tolower(tweets.tokens) %>% tokens_wordstem() %>%
+    tokens_remove(stopwords("english")) %>% 
+    tokens_subset(ntoken(tweets.tokens) > 2) # removes tweets with 2 or fewer tokens
+
+
+y <- factor(docvars(tweets.tokens, "handle"))
+
+tweets.dfm <- dfm(tweets.tokens)
+dim(tweets.dfm)
+
+
+```
+
+

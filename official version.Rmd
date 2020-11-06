@@ -82,7 +82,7 @@ Il faut le faire manuellement afin d'éviter la limite de tweet possible par req
 tweet_trump <- get_timelines("realDonaldTrump", n = 3000, 
             include_rts = FALSE)
 
-#get the hastage trump
+#get the hastag trump
 tweet_trump_hashtag <- search_tweets(
   "#Trump", n = 2000, include_rts = FALSE
 )
@@ -344,11 +344,11 @@ write.csv(tweet_biden_hashtag, file = "hashtag_biden.csv", row.names=FALSE)
 
 ```{r}
 library(here)
-# library(readtext)
+library(readtext)
 library(foreign)
 library(quanteda)
 library(dplyr)
-f <- file.path(here("data/"), c("BIDEN_all_tweet.csv","KAMALA_all_tweet.csv", "TRUMP_all_tweet.csv", "VP_all_tweet.csv"))
+f <- file.path(here("data_before/"), c("BIDEN_all_tweet.csv","KAMALA_all_tweet.csv", "TRUMP_all_tweet.csv", "VP_all_tweet.csv"))
 d <- lapply(f, read.csv)
 str(d, give.attr = FALSE)
 

@@ -1,0 +1,14 @@
+---
+title: "brouillon"
+author: "Cédric Vuignier"
+date: "11/6/2020"
+output: html_document
+---
+
+```{r}
+
+mach_tweets = search_tweets("machine learning", n=500, lang="en")
+
+
+```
+

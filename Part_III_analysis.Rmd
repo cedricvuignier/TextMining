@@ -1,0 +1,123 @@
+# sentiment Analysis
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, , fig.height= 4, fig.height=4}
+# trump analysis
+
+
+TRUMP_all_tweet <- read_csv("data_before/TRUMP_all_tweet.csv")
+
+#remove amp word" because I don't know why the sign & is transformed into "amp"
+TRUMP_all_tweet <- gsub("amp","", TRUMP_all_tweet)
+TRUMP_all_tweet <- as_tibble(TRUMP_all_tweet)
+
+#transform in a tibble
+crude.trump <- as_tibble(data.frame(TRUMP_all_tweet))
+
+#tokenization
+crude.tok <- unnest_tokens(crude.trump, output="word", input="value", to_lower=TRUE, strip_punct=TRUE, 
+                           strip_numeric=TRUE)
+#remove stop words
+crude.tok <- anti_join(crude.tok, stop_words, by = "word")
+
+
+#count the words use by trump 
+crude.fr <- crude.tok %>%  count(word, sort=TRUE) %>% ungroup()
+
+#wordcloud
+crude.fr <- crude.fr 
+wordcloud(words=crude.fr$word, freq=crude.fr$n, max.words=120, random.order=FALSE, rot.per=0.35, 
+          colors=brewer.pal(8, "Dark2"))
+##########################################################################################
+#sentimental analysis
+
+crude.sent <- crude.tok %>%
+  inner_join(get_sentiments("nrc"))
+
+
+crude.sent %>% group_by(sentiment) %>% 
+  summarize(n = n()) %>% 
+  ggplot(aes(x = reorder(sentiment, -n) , y = n, fill = sentiment)) + 
+  geom_bar(stat = "identity", alpha = 0.8) +
+  ggtitle("Sentiment Analysis of Donald Trump's tweets") +
+  xlab("sentiment") + ylab("nb") +
+  scale_x_discrete(guide = guide_axis(n.dodge = 2))
+```
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, fig.height= 4, fig.height=4}
+#biden
+BIDEN_all_tweet <- read_csv("data_before/BIDEN_all_tweet.csv")
+
+#remove amp word" because I don't know why the sign & is transformed into "amp"
+BIDEN_all_tweet <- gsub("amp","", BIDEN_all_tweet)
+BIDEN_all_tweet <- as_tibble(BIDEN_all_tweet)
+
+#transform in a tibble
+crude.biden <- as_tibble(data.frame(BIDEN_all_tweet))
+
+#tokenization
+crude.tok <- unnest_tokens(crude.biden, output="word", input="value", to_lower=TRUE, strip_punct=TRUE, 
+                           strip_numeric=TRUE)
+#remove stop words
+crude.tok <- anti_join(crude.tok, stop_words, by = "word")
+
+
+#count the words use by trump 
+crude.fr <- crude.tok %>%  count(word, sort=TRUE) %>% ungroup()
+
+#wordcloud
+crude.fr <- crude.fr 
+wordcloud(words=crude.fr$word, freq=crude.fr$n, max.words=120, random.order=FALSE, rot.per=0.35, 
+          colors=brewer.pal(8, "Dark2"))
+
+##########################################################################################
+#sentimental analysis
+
+crude.sent <- crude.tok %>%
+  inner_join(get_sentiments("nrc"))
+
+
+crude.sent %>% group_by(sentiment) %>% 
+  summarize(n = n()) %>% 
+  ggplot(aes(x = reorder(sentiment, -n) , y = n, fill = sentiment)) + 
+  geom_bar(stat = "identity", alpha = 0.8) +
+  ggtitle("Sentiment Analysis of Joe Biden's tweets") +
+  xlab("sentiment") + ylab("nb") +
+  scale_x_discrete(guide = guide_axis(n.dodge = 2))
+```
+# Analysis GAETAN
+## j'ai mis ton code en option qu'il ne run pas juste pour knit 
+```{r eval=FALSE, include=FALSE}
+
+
+f <- file.path(here("data_before/"), c("BIDEN_all_tweet.csv","KAMALA_all_tweet.csv", "TRUMP_all_tweet.csv", "VP_all_tweet.csv"))
+d <- lapply(f, read.csv)
+str(d, give.attr = FALSE)
+
+d <- Map(cbind, d, name = c("Biden", "Kamala", "Trump", "VP"))
+
+test<- rbind(d[[1]], d[[2]], d[[3]], d[[4]])
+test<- tibble(test)
+
+
+test2 <- as.character(as.vector(test[,1])) 
+tweets.corpus <- corpus(test2)
+
+tweets.tokens <- tokens(tweets.corpus, 
+                        remove_punct = TRUE, 
+                        remove_symbols = TRUE, 
+                        remove_url = TRUE,
+                        what="word1") ## option for removing hastags and tags symbols (@, #, etc.)
+
+tweets.tokens <- tokens_tolower(tweets.tokens) %>% tokens_wordstem() %>%
+    tokens_remove(stopwords("english")) %>% 
+    tokens_subset(ntoken(tweets.tokens) > 2) # removes tweets with 2 or fewer tokens
+
+
+y <- factor(docvars(tweets.tokens, "handle"))
+
+tweets.dfm <- dfm(tweets.tokens)
+dim(tweets.dfm)
+
+
+```

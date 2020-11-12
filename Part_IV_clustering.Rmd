@@ -1,0 +1,87 @@
+---
+title: "Similarities"
+author: "Cédric Vuignier"
+date: "11/12/2020"
+output: html_document
+---
+
+```{r}
+library(readr)
+library(quanteda)
+library(tidyr)
+#merge all the tweet into one document 
+#biden
+Biden_crude <- read_delim("data_before/BIDEN_all_tweet.csv", "\t", escape_double = FALSE, trim_ws = TRUE)
+
+Biden_doc <- paste(Biden_crude$value, collapse = '') %>% 
+  as.data.frame() 
+Biden_doc <- rename(Biden_doc, Text = .)
+#kamala
+Kamala_crude <- read_delim("data_before/KAMALA_all_tweet.csv", "\t", escape_double = FALSE, trim_ws = TRUE)
+
+Kamala_doc <- paste(Kamala_crude$value, collapse = '') %>% 
+  as.data.frame() 
+Kamala_doc <- rename(Kamala_doc, Text = .)
+#TRUMP
+Trump_crude <- read_delim("data_before/TRUMP_all_tweet.csv", "\t", escape_double = FALSE, trim_ws = TRUE)
+
+Trump_doc <- paste(Trump_crude$value, collapse = '') %>% 
+  as.data.frame() 
+Trump_doc <- rename(Trump_doc, Text = .)
+#VP
+vp_crude <- read_delim("data_before/VP_all_tweet.csv", "\t", escape_double = FALSE, trim_ws = TRUE)
+
+Vp_doc <- paste(vp_crude$value, collapse = '') %>% 
+  as.data.frame() 
+Vp_doc <- rename(Vp_doc, Text = .)
+#hashtag trump
+hashtag_Trump_crude <- read_delim("data_before/hashtag_trump.csv", "\t", escape_double = FALSE, trim_ws = TRUE)
+H_trump_doc <- paste(hashtag_Trump_crude$value, collapse = '') %>% 
+  as.data.frame() 
+H_trump_doc <- rename(H_trump_doc, Text = .)
+#hashtag biden
+hashtag_Biden_crude <- read_delim("data_before/hashtag_biden.csv", "\t", escape_double = FALSE, trim_ws = TRUE)
+H_biden_doc <- paste(hashtag_Biden_crude$value, collapse = '') %>% 
+  as.data.frame() 
+H_biden_doc <- rename(H_biden_doc, Text = .)
+
+#merge all the doc
+Before_Tweet <- as.data.frame(c(Biden_doc,Kamala_doc,Trump_doc,Vp_doc,H_trump_doc,H_biden_doc))
+#pivot
+Before_Tweet <- Before_Tweet %>% 
+   pivot_longer(
+     cols = starts_with("Text"))
+#create a corpus
+before_corpus <- corpus(Before_Tweet$value)
+```
+
+```{r }
+
+#Type-token Ratio
+tweet.dfm <- dfm(before_corpus,
+                   stem=FALSE,
+                   tolower=TRUE,
+                   remove=c("reuter",stopwords("english")),
+                   remove_punct=TRUE,
+                   remove_number=TRUE,
+                   remove_symbols=TRUE)
+tweet.div <- textstat_lexdiv(tweet.dfm, measure = "I")
+tweet.div %>% 
+  ggplot(aes(x=reorder(document, I), y=I))+geom_point()+coord_flip()+
+  xlab("Text") + ylab("Yule's index")
+```
+
+```{r}
+#MATTR
+tweet.tok <- tokens(before_corpus,
+                    remove_punct=TRUE,
+                    remove_number=TRUE,
+                    remove_symbols = TRUE)
+tweet.tok <- tokens_remove(tweet.tok, stopwords("english"))
+tweet.tok <- tokens_tolower(tweet.tok)
+tweet.div <- textstat_lexdiv(tweet.tok, measure = "MATTR", MATTR_window = 10)
+tweet.div %>% 
+  ggplot(aes(x=reorder(document, MATTR), y=MATTR))+geom_point()+coord_flip()+
+  xlab("Text") + ylab("MATTR")
+```
+

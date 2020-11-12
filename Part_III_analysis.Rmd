@@ -164,14 +164,14 @@ H_biden_doc <- rename(H_biden_doc, Text = .)
 #merge all the doc
 Before_Tweet <- as.data.frame(c(Biden_doc,Kamala_doc,Trump_doc,Vp_doc,H_trump_doc,H_biden_doc))
 #pivot
-row_name <- c("Biden_doc", "Kamala_doc", "Trump_doc", "Vp_doc" , "H_trump_doc", "H_biden_doc")
+candidat <- c("Biden_doc", "Kamala_doc", "Trump_doc", "Vp_doc" , "H_trump_doc", "H_biden_doc")
 party <- c("democrate", "democrate", "republican", "republican" , "people", "people")
 
 Before_Tweet <- Before_Tweet %>% 
    pivot_longer(
      cols = starts_with("Text"))
 
-row.names(Before_Tweet) <- row_name
+Before_Tweet <- mutate(Before_Tweet, candidat = candidat)
 Before_Tweet <- mutate(Before_Tweet, party = party)
 #create a corpus
 before_corpus <- corpus(Before_Tweet,text_field = "value")
@@ -204,7 +204,7 @@ tweet.tok2 <- tokens(corpus_subset(before_corpus),
                       remove_symbols = TRUE,
                       remove_numbers = TRUE) %>%  
   tokens_replace(pattern=hash_lemmas$token, replacement = hash_lemmas$lemma) %>% 
-  tokens_remove(pattern = stopwords("english"))
+  tokens_remove(pattern = c("s", "amp", "de","la", "en", "t", "gt", "e", "hashta", stopwords("english")))
   
 
 tweet.tfidf <- dfm(tweet.tok2) %>% dfm_tfidf() %>% tidy()
@@ -217,7 +217,7 @@ tweet.tfidf %>%
   facet_wrap(~document, ncol = 2)
 
 ## Make a cloud of words (frequency based below, only terms with frequency >= 10)
-set.seed(123)
+set.seed(11)
 tweet.tok2 %>% dfm() %>% dfm_trim(min_termfreq = 10) %>% textplot_wordcloud()
 
 ## Compare the speeches in terms of lexical diversity
@@ -225,14 +225,32 @@ textstat_lexdiv(before.tok, measure = "I") %>%
   ggplot(aes(x=reorder(document, I), y=I))+geom_point()+coord_flip()+
   xlab("Text") + ylab("Yule's index")
 
-## Compare the speech of Obama to the speech of Trump (target) in terms of keyness
+## Compare the tweets of republican vs to the tweets of democrat in terms of keyness
 tweet.tok3 <- tokens(corpus_subset(before_corpus, party %in% c("democrate", "republican")),
                       remove_punct = TRUE,
                       remove_symbols = TRUE,
                       remove_numbers = TRUE) %>%
   tokens_replace(pattern=hash_lemmas$token, replacement = hash_lemmas$lemma) %>%
-  tokens_remove(pattern = stopwords("english"))
+  tokens_remove(pattern = c("s", "amp", "de","la", "en", "t", stopwords("english")))
 tweet.tok3 %>% dfm(groups="party") %>% textstat_keyness(target="democrate") %>% textplot_keyness()
+
+## Compare the tweets of Trump vs to the tweets of Biden in terms of keyness
+tweet.tok4 <- tokens(corpus_subset(before_corpus, candidat %in% c("Trump_doc", "Biden_doc")),
+                      remove_punct = TRUE,
+                      remove_symbols = TRUE,
+                      remove_numbers = TRUE) %>%
+  tokens_replace(pattern=hash_lemmas$token, replacement = hash_lemmas$lemma) %>%
+  tokens_remove(pattern = c("s", "amp", "de","la", "en", "t", stopwords("english")))
+tweet.tok4 %>% dfm(groups="candidat") %>% textstat_keyness(target="Biden_doc") %>% textplot_keyness()
+
+## Compare the tweets using hashtag Trump vs to the tweets using hashtag Biden in terms of keyness
+tweet.tok5 <- tokens(corpus_subset(before_corpus, candidat %in% c("H_trump_doc", "H_biden_doc")),
+                      remove_punct = TRUE,
+                      remove_symbols = TRUE,
+                      remove_numbers = TRUE) %>%
+  tokens_replace(pattern=hash_lemmas$token, replacement = hash_lemmas$lemma) %>%
+  tokens_remove(pattern = c("s", "amp", "de","la", "en", "t", "gt", "e", "hashta", stopwords("english")))
+tweet.tok5 %>% dfm(groups="candidat") %>% textstat_keyness(target="H_biden_doc") %>% textplot_keyness()
 ```
 
 

@@ -142,8 +142,21 @@ crude.sent.kamala %>% group_by(sentiment) %>%
 ```{r echo=FALSE, message=FALSE, warning=FALSE, , fig.height= 4, fig.height=4}
 #republicans
 # trump analysis
-TRUMP_all_tweet <- read_csv("data_before/TRUMP_all_tweet.csv")
-VP_all_tweet <- read_csv("data_before/VP_all_tweet.csv")
+TRUMP_all_tweet <- read_csv("data supervised_L/trump_after.csv")
+VP_all_tweet <- read_csv("data supervised_L/vp_after.csv")
+
+#get only the tweets after the election
+Trump_after_analysis <- TRUMP_all_tweet %>% 
+  mutate(date = date(created_at)) %>% 
+  filter(date >= "2020-11-03" )
+#only some variable
+Trump_after_analysis <- Trump_after_analysis %>% 
+  select(text)
+#as tibble
+Trump_after_analysis <- as_tibble(data.frame(Trump_after_analysis))
+#data cleaning
+crude.tok <- unnest_tokens(crude.tb, output="word", input="Text", to_lower=TRUE, strip_punct=TRUE, 
+                           strip_numeric=TRUE)
 
 #remove amp word" because I don't know why the sign & is transformed into "amp"
 TRUMP_all_tweet <- gsub("amp","", TRUMP_all_tweet)

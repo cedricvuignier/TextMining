@@ -13,7 +13,7 @@ tweet_trump <- get_timelines("realDonaldTrump", n = 3000,
 
 #get the hastag trump
 tweet_trump_hashtag <- search_tweets(
-  "#Trump", n = 2000, include_rts = FALSE
+  "#Trump", n = 3000, include_rts = FALSE
 )
 
 #vice president tweet
@@ -27,7 +27,7 @@ tweet_BIDEN <- get_timelines("JoeBiden", n = 3000,
 
 #get the hastage biden
 tweet_biden_hashtag <- search_tweets(
-  "#Biden", n = 2000, include_rts = FALSE
+  "#Biden", n = 3000, include_rts = FALSE
 )
 
 #the vice president selected by biden if he is elected 
@@ -270,12 +270,31 @@ tweet_biden_hashtag <- tweet_biden_hashtag[!(is.na(tweet_biden_hashtag$value) | 
 
 #FINALY WE SAVE OUR DATAFRAME
 ```{r eval=FALSE, include=FALSE}
+########before###########################################
 write.csv(TRUMP, file = "TRUMP_all_tweet.csv", row.names=FALSE)
 write.csv(VP, file = "VP_all_tweet.csv", row.names=FALSE)
 write.csv(BIDEN, file = "BIDEN_all_tweet.csv", row.names=FALSE)
 write.csv(KAMALA, file = "KAMALA_all_tweet.csv", row.names=FALSE)
-
 #hashtag csv
 write.csv(tweet_trump_hashtag, file = "hashtag_trump.csv", row.names=FALSE)
 write.csv(tweet_biden_hashtag, file = "hashtag_biden.csv", row.names=FALSE)
+
+#########after###########################################
+tweet_trump = data.frame(lapply(tweet_trump, as.character), stringsAsFactors=FALSE)
+tweet_VP = data.frame(lapply(tweet_VP, as.character), stringsAsFactors=FALSE)
+tweet_BIDEN = data.frame(lapply(tweet_BIDEN, as.character), stringsAsFactors=FALSE)
+tweet_KAMALA = data.frame(lapply(tweet_KAMALA, as.character), stringsAsFactors=FALSE)
+
+write.csv(tweet_trump, "data supervised_L\\trump_after.csv", row.names=FALSE)
+write.csv(tweet_VP, "data supervised_L\\vp_after.csv", row.names=FALSE)
+write.csv(tweet_BIDEN, "data supervised_L\\biden_after.csv", row.names=FALSE)
+write.csv(tweet_KAMALA, "data supervised_L\\kamala_after.csv", row.names=FALSE)
+#hashtag csv
+tweet_trump_hashtag = data.frame(lapply(tweet_trump_hashtag, as.character), stringsAsFactors=FALSE)
+tweet_biden_hashtag = data.frame(lapply(tweet_biden_hashtag, as.character), stringsAsFactors=FALSE)
+
+write.csv(tweet_trump_hashtag, "data supervised_L\\hashtag_trump_after.csv", row.names=FALSE)
+write.csv(tweet_biden_hashtag, "data supervised_L\\hashtag_biden_after.csv", row.names=FALSE)
+
+
 ```

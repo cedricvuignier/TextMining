@@ -1,260 +1,213 @@
 # sentiment Analysis
-## before the election
-
-```{r echo=FALSE, message=FALSE, warning=FALSE, , fig.height= 4, fig.height=4}
-#republicans
-# trump analysis
+## before and after the election
+```{r }
+#data after
+TRUMP_all_tweet <- read_csv("data supervised_L/trump_after.csv")
+#get only the tweets after the election
+Trump_after_analysis <- TRUMP_all_tweet %>% 
+  mutate(date = date(created_at)) %>% 
+  filter(date >= "2020-11-03") %>% 
+  select(text)
+#data before
 TRUMP_all_tweet <- read_csv("data_before/TRUMP_all_tweet.csv")
-VP_all_tweet <- read_csv("data_before/VP_all_tweet.csv")
-
 #remove amp word" because I don't know why the sign & is transformed into "amp"
-TRUMP_all_tweet <- gsub("amp","", TRUMP_all_tweet)
-TRUMP_all_tweet <- as_tibble(TRUMP_all_tweet)
+TRUMP_before_Analysis <- gsub("amp","", TRUMP_all_tweet)
+TRUMP_before_Analysis <- as_tibble(TRUMP_all_tweet)
 #
-VP_all_tweet <- gsub("amp","", VP_all_tweet)
-VP_all_tweet <- as_tibble(VP_all_tweet)
+Trump_after_analysis <- gsub("amp","", Trump_after_analysis)
+Trump_after_analysis <- as_tibble(Trump_after_analysis)
 
 #transform in a tibble
-crude.trump <- as_tibble(data.frame(TRUMP_all_tweet))
-#
-crude.vp <- as_tibble(data.frame(VP_all_tweet))
-
+before.trump <- as_tibble(data.frame(TRUMP_before_Analysis))
+after.trump <- as_tibble(data.frame(Trump_after_analysis))
 #tokenization
-crude.tok <- unnest_tokens(crude.trump, output="word", input="value", to_lower=TRUE, strip_punct=TRUE, 
+
+before.tok <- unnest_tokens(before.trump, output="word", input="value", to_lower=TRUE, strip_punct=TRUE, 
                            strip_numeric=TRUE)
-#
-crude.tok.vp <- unnest_tokens(crude.vp, output="word", input="value", to_lower=TRUE, strip_punct=TRUE, 
+after.tok <- unnest_tokens(after.trump, output="word", input="value", to_lower=TRUE, strip_punct=TRUE, 
                            strip_numeric=TRUE)
 #remove stop words
-crude.tok <- anti_join(crude.tok, stop_words, by = "word")
-#
-crude.tok.vp <- anti_join(crude.tok.vp, stop_words, by = "word")
+before.tok <- anti_join(before.tok, stop_words, by = "word")
+after.tok <- anti_join(after.tok, stop_words, by = "word")
 
 #count the words use by trump 
-crude.fr <- crude.tok %>%  count(word, sort=TRUE) %>% ungroup()
-#
-crude.fr.vp <- crude.tok.vp %>%  count(word, sort=TRUE) %>% ungroup()
+before.fr <- before.tok %>%  count(word, sort=TRUE) %>% ungroup()
+after.fr <- after.tok %>%  count(word, sort=TRUE) %>% ungroup() 
 
 #wordcloud
-crude.fr <- crude.fr 
-wordcloud(words=crude.fr$word, freq=crude.fr$n, max.words=120, random.order=FALSE, rot.per=0.35, 
+before.fr <- before.fr 
+wordcloud(words=before.fr$word, freq=before.fr$n, max.words=120, random.order=FALSE, rot.per=0.35, 
           colors=brewer.pal(8, "Dark2"))
-#
-crude.fr.vp <- crude.fr.vp 
-wordcloud(words=crude.fr.vp$word, freq=crude.fr.vp$n, max.words=120, random.order=FALSE, rot.per=0.35, 
+after.fr <- after.fr %>% 
+  filter(n < 200)
+wordcloud(words=after.fr$word, freq=after.fr$n, max.words=120, random.order=FALSE, rot.per=0.35, 
           colors=brewer.pal(8, "Dark2"))
 ##########################################################################################
 #sentimental analysis
-crude.sent.trump <- crude.tok %>%
+before.sent.trump <- before.tok %>%
   inner_join(get_sentiments("nrc"))
 
-crude.sent %>% group_by(sentiment) %>% 
+after.sent.trump <- after.tok %>%
+  inner_join(get_sentiments("nrc"))
+
+#before
+before.sent.trump %>% group_by(sentiment) %>% 
   summarize(n = n()) %>% 
   ggplot(aes(x = reorder(sentiment, -n) , y = n, fill = sentiment)) + 
   geom_bar(stat = "identity", alpha = 0.8) +
   ggtitle("Sentiment Analysis of Donald Trump's tweets") +
   xlab("sentiment") + ylab("nb") +
   scale_x_discrete(guide = guide_axis(n.dodge = 2))
-#
-crude.sent.vp <- crude.tok.vp %>%
-  inner_join(get_sentiments("nrc"))
-
-crude.sent.vp %>% group_by(sentiment) %>% 
+#after
+after.sent.trump %>% group_by(sentiment) %>% 
   summarize(n = n()) %>% 
   ggplot(aes(x = reorder(sentiment, -n) , y = n, fill = sentiment)) + 
   geom_bar(stat = "identity", alpha = 0.8) +
-  ggtitle("Sentiment Analysis of Mike Pence's tweets") +
+  ggtitle("Sentiment Analysis of Donald Trump's tweets") +
   xlab("sentiment") + ylab("nb") +
   scale_x_discrete(guide = guide_axis(n.dodge = 2))
+
 
 ```
 
-
-```{r echo=FALSE, message=FALSE, warning=FALSE, fig.height= 4, fig.height=4}
-#democrate
-#biden and kamala
-BIDEN_all_tweet <- read_csv("data_before/BIDEN_all_tweet.csv")
-kamala_all_tweet <- read_csv("data_before/KAMALA_all_tweet.csv")
-#remove amp word" because I don't know why the sign & is transformed into "amp"
-BIDEN_all_tweet <- gsub("amp","", BIDEN_all_tweet)
-BIDEN_all_tweet <- as_tibble(BIDEN_all_tweet)
-#
-kamala_all_tweet <- gsub("amp","", kamala_all_tweet)
-kamala_all_tweet <- as_tibble(kamala_all_tweet)
-
-#transform in a tibble
-crude.biden <- as_tibble(data.frame(BIDEN_all_tweet))
-#
-crude.kamala <- as_tibble(data.frame(kamala_all_tweet))
-
-#tokenization
-crude.tok <- unnest_tokens(crude.biden, output="word", input="value", to_lower=TRUE, strip_punct=TRUE, 
-                           strip_numeric=TRUE)
-#
-crude.tok.kamala <- unnest_tokens(crude.kamala, output="word", input="value", to_lower=TRUE, strip_punct=TRUE, 
-                           strip_numeric=TRUE)
-#remove stop words
-crude.tok <- anti_join(crude.tok, stop_words, by = "word")
-#
-crude.tok.kamala <- anti_join(crude.tok.kamala, stop_words, by = "word")
-
-#count the words use by biden and kamala 
-crude.fr <- crude.tok %>%  count(word, sort=TRUE) %>% ungroup()
-#
-crude.fr.kamala <- crude.tok.kamala %>%  count(word, sort=TRUE) %>% ungroup()
-
-#wordcloud
-crude.fr <- crude.fr 
-wordcloud(words=crude.fr$word, freq=crude.fr$n, max.words=120, random.order=FALSE, rot.per=0.35, 
-          colors=brewer.pal(8, "Dark2"))
-#
-crude.fr.kamala <- crude.fr.kamala 
-wordcloud(words=crude.fr.kamala$word, freq=crude.fr.kamala$n, max.words=120, random.order=FALSE, rot.per=0.35, 
-          colors=brewer.pal(8, "Dark2"))
-
-##########################################################################################
-#sentimental analysis
-
-crude.sent <- crude.tok %>%
-  inner_join(get_sentiments("nrc"))
-
-crude.sent %>% group_by(sentiment) %>% 
-  summarize(n = n()) %>% 
-  ggplot(aes(x = reorder(sentiment, -n) , y = n, fill = sentiment)) + 
-  geom_bar(stat = "identity", alpha = 0.8) +
-  ggtitle("Sentiment Analysis of Joe Biden's tweets") +
-  xlab("sentiment") + ylab("nb") +
-  scale_x_discrete(guide = guide_axis(n.dodge = 2))
-#
-crude.sent.kamala <- crude.tok.kamala %>%
-  inner_join(get_sentiments("nrc"))
-
-crude.sent.kamala %>% group_by(sentiment) %>% 
-  summarize(n = n()) %>% 
-  ggplot(aes(x = reorder(sentiment, -n) , y = n, fill = sentiment)) + 
-  geom_bar(stat = "identity", alpha = 0.8) +
-  ggtitle("Sentiment Analysis of Joe Biden's tweets") +
-  xlab("sentiment") + ylab("nb") +
-  scale_x_discrete(guide = guide_axis(n.dodge = 2))
-```
 ## after the election
 
 ```{r echo=FALSE, message=FALSE, warning=FALSE, , fig.height= 4, fig.height=4}
 #republicans
 # trump analysis
 TRUMP_all_tweet <- read_csv("data supervised_L/trump_after.csv")
-VP_all_tweet <- read_csv("data supervised_L/vp_after.csv")
-
 #get only the tweets after the election
 Trump_after_analysis <- TRUMP_all_tweet %>% 
   mutate(date = date(created_at)) %>% 
-  filter(date >= "2020-11-03" )
-#only some variable
+  filter(date >= "2020-11-03")
+#get the tweet before
+Trump_before_analysis <- TRUMP_all_tweet %>% 
+  mutate(date = date(created_at)) %>% 
+  filter(date < "2020-11-03")
+#add variable before or after
+Trump_after_analysis <-Trump_after_analysis %>% 
+  mutate(when = "after")
+
+Trump_before_analysis <-Trump_before_analysis %>% 
+  mutate(when = "before")
+#############
 Trump_after_analysis <- Trump_after_analysis %>% 
-  select(text)
-#as tibble
-Trump_after_analysis <- as_tibble(data.frame(Trump_after_analysis))
-#data cleaning
-crude.tok <- unnest_tokens(crude.tb, output="word", input="Text", to_lower=TRUE, strip_punct=TRUE, 
+  select(text,screen_name, when) %>% 
+  group_by(screen_name, when) %>% 
+  summarise(paste(Trump_after_analysis$text, collapse = '')) 
+
+Trump_after_analysis <- rename(Trump_after_analysis, text = `paste(Trump_after_analysis$text, collapse = "")`)
+  
+Trump_before_analysis <- Trump_before_analysis %>% 
+  select(text,screen_name, when) %>% 
+  group_by(screen_name, when) %>% 
+  summarise(paste(Trump_before_analysis$text, collapse = '')) 
+
+Trump_before_analysis <- rename(Trump_before_analysis, text = `paste(Trump_before_analysis$text, collapse = "")`)
+###################### DEMOCRATE
+# biden analysis
+BIDEN_all_tweet <- read_csv("data supervised_L/biden_after.csv")
+#get only the tweets after the election
+Biden_after_analysis <- BIDEN_all_tweet %>% 
+  mutate(date = date(created_at)) %>% 
+  filter(date >= "2020-11-03")
+#get the tweet before
+Biden_before_analysis <- BIDEN_all_tweet %>% 
+  mutate(date = date(created_at)) %>% 
+  filter(date < "2020-11-03")
+#add variable before or after
+Biden_after_analysis <-Biden_after_analysis %>% 
+  mutate(when = "after")
+
+Biden_before_analysis <-Biden_before_analysis %>% 
+  mutate(when = "before")
+#############
+Biden_after_analysis <- Biden_after_analysis %>% 
+  select(text,screen_name, when) %>% 
+  group_by(screen_name, when) %>% 
+  summarise(paste(Biden_after_analysis$text, collapse = '')) 
+
+Biden_after_analysis <- rename(Biden_after_analysis, text = `paste(Biden_after_analysis$text, collapse = "")`)
+  
+Biden_before_analysis <- Biden_before_analysis %>% 
+  select(text,screen_name, when) %>% 
+  group_by(screen_name, when) %>% 
+  summarise(paste(Biden_before_analysis$text, collapse = '')) 
+
+Biden_before_analysis <- rename(Biden_before_analysis, text = `paste(Biden_before_analysis$text, collapse = "")`)
+
+  
+Tweet <- rbind(Trump_before_analysis,Trump_after_analysis, Biden_before_analysis, Biden_after_analysis)
+
+Tweet_corpus <- corpus(Tweet, 
+                     docvars = data.frame(party = names(Tweet)))
+#####################################
+## with quanteda
+tweet.tok <- tokens(Tweet_corpus,
+                     remove_punct = TRUE,
+                     remove_symbols = TRUE,
+                     remove_numbers = TRUE)
+tweet.tok <- tokens_tolower(tweet.tok)
+tweet.tok <- tokens_replace(tweet.tok, pattern=hash_lemmas$token, replacement = hash_lemmas$lemma)
+tweet.tok <- tokens_remove(tweet.tok, pattern = stopwords("english")) 
+## Note: lemmatization may change some words to stopwords (like "yeah" to "yes"). 
+## Stopwords cleaning should be performed at the end
+
+## Make a sentiment analysis 
+tweet.sent <- tokens_lookup(tweet.tok, dictionary = data_dictionary_LSD2015) %>% dfm()
+tweet.sent.td <- tidy(tweet.sent)
+ggplot(tweet.sent.td,aes(x=document, y=count, fill=term)) + geom_bar(stat="identity") + coord_flip()
+
+## with tidytext
+tweet.tb <- tidy(Tweet_corpus) %>% mutate(Document=paste(when,"_",screen_name,sep=""))
+tweet.tok <- unnest_tokens(tweet.tb, output="word", input="text", to_lower=TRUE, strip_punct=TRUE, 
                            strip_numeric=TRUE)
-
-#remove amp word" because I don't know why the sign & is transformed into "amp"
-TRUMP_all_tweet <- gsub("amp","", TRUMP_all_tweet)
-TRUMP_all_tweet <- as_tibble(TRUMP_all_tweet)
-#
-VP_all_tweet <- gsub("amp","", VP_all_tweet)
-VP_all_tweet <- as_tibble(VP_all_tweet)
-
-#transform in a tibble
-crude.trump <- as_tibble(data.frame(TRUMP_all_tweet))
-#
-crude.vp <- as_tibble(data.frame(VP_all_tweet))
-
-#tokenization
-crude.tok <- unnest_tokens(crude.trump, output="word", input="value", to_lower=TRUE, strip_punct=TRUE, 
-                           strip_numeric=TRUE)
-#
-crude.tok.vp <- unnest_tokens(crude.vp, output="word", input="value", to_lower=TRUE, strip_punct=TRUE, 
-                           strip_numeric=TRUE)
-#remove stop words
-crude.tok <- anti_join(crude.tok, stop_words, by = "word")
-#
-crude.tok.vp <- anti_join(crude.tok.vp, stop_words, by = "word")
-
-#count the words use by trump 
-crude.fr <- crude.tok %>%  count(word, sort=TRUE) %>% ungroup()
-#
-crude.fr.vp <- crude.tok.vp %>%  count(word, sort=TRUE) %>% ungroup()
-
-#wordcloud
-crude.fr <- crude.fr 
-wordcloud(words=crude.fr$word, freq=crude.fr$n, max.words=120, random.order=FALSE, rot.per=0.35, 
-          colors=brewer.pal(8, "Dark2"))
-#
-crude.fr.vp <- crude.fr.vp 
-wordcloud(words=crude.fr.vp$word, freq=crude.fr.vp$n, max.words=120, random.order=FALSE, rot.per=0.35, 
-          colors=brewer.pal(8, "Dark2"))
-##########################################################################################
-#sentimental analysis
-crude.sent.trump <- crude.tok %>%
+tweet.sent <- tweet.tok %>%
   inner_join(get_sentiments("nrc"))
 
-crude.sent %>% group_by(sentiment) %>% 
-  summarize(n = n()) %>% 
-  ggplot(aes(x = reorder(sentiment, -n) , y = n, fill = sentiment)) + 
-  geom_bar(stat = "identity", alpha = 0.8) +
-  ggtitle("Sentiment Analysis of Donald Trump's tweets") +
-  xlab("sentiment") + ylab("nb") +
-  scale_x_discrete(guide = guide_axis(n.dodge = 2))
-#
-crude.sent.vp <- crude.tok.vp %>%
-  inner_join(get_sentiments("nrc"))
 
-crude.sent.vp %>% group_by(sentiment) %>% 
-  summarize(n = n()) %>% 
-  ggplot(aes(x = reorder(sentiment, -n) , y = n, fill = sentiment)) + 
-  geom_bar(stat = "identity", alpha = 0.8) +
-  ggtitle("Sentiment Analysis of Mike Pence's tweets") +
-  xlab("sentiment") + ylab("nb") +
-  scale_x_discrete(guide = guide_axis(n.dodge = 2))
+table(tweet.sent$Document, tweet.sent$sentiment)
+
+tweet.sent %>% group_by(Document, sentiment) %>% summarize(n = n()) %>% 
+  ggplot(aes(x = sentiment, y = n, fill = sentiment)) + 
+  geom_bar(stat = "identity", alpha = 0.8) + 
+  facet_wrap(~ Document) + coord_flip()
+
+## Same with sentiment frequencies per document
+tweet.sent %>% group_by(Document, sentiment) %>%  summarize(n = n()) %>% 
+  mutate(freq = n / sum(n)) %>% ggplot(aes(x = sentiment, y = freq, fill = sentiment)) + 
+  geom_bar(stat = "identity", alpha = 0.8) + 
+  facet_wrap(~ Document) + coord_flip()
+
+## With afinn
+tweet.sent <- tweet.tok %>%
+  inner_join(get_sentiments("afinn"))
+tweet.sent
+## Summarize per document (value average) + barplot
+aggregate(value~Document, data=tweet.sent, FUN=mean)
+
+aggregate(value~Document, data=tweet.sent, FUN=mean) %>% 
+  ggplot(aes(x = Document, y = value)) + 
+  geom_bar(stat = "identity") + coord_flip()
+
+library(sentimentr)
+library(lexicon)
+## Valence shifter approach
+crude.tweet <- get_sentences(Tweet_corpus[1:2])
+crude.senti <- sentiment(crude.tweet) 
+crude.senti <- as_tibble(crude.senti)
+
+library(splines)
+crude.senti %>% group_by(element_id) %>% 
+  ggplot(aes(x = sentence_id, y = sentiment)) + 
+  geom_line() +  
+  geom_smooth(se=FALSE, formula=y ~ bs(x), method="lm") +
+  facet_wrap(~ element_id, scale="free_x")
+
 
 ```
 
-# Analysis GAETAN
-## j'ai mis ton code en option qu'il ne run pas juste pour knit 
-```{r eval=FALSE, include=FALSE}
 
-
-f <- file.path(here("data_before/"), c("BIDEN_all_tweet.csv","KAMALA_all_tweet.csv", "TRUMP_all_tweet.csv", "VP_all_tweet.csv"))
-d <- lapply(f, read.csv)
-str(d, give.attr = FALSE)
-
-d <- Map(cbind, d, name = c("Biden", "Kamala", "Trump", "VP"))
-
-test<- rbind(d[[1]], d[[2]], d[[3]], d[[4]])
-test<- tibble(test)
-
-
-test2 <- as.character(as.vector(test[,1])) 
-tweets.corpus <- corpus(test2)
-
-tweets.tokens <- tokens(tweets.corpus, 
-                        remove_punct = TRUE, 
-                        remove_symbols = TRUE, 
-                        remove_url = TRUE,
-                        what="word1") ## option for removing hastags and tags symbols (@, #, etc.)
-
-tweets.tokens <- tokens_tolower(tweets.tokens) %>% tokens_wordstem() %>%
-    tokens_remove(stopwords("english")) %>% 
-    tokens_subset(ntoken(tweets.tokens) > 2) # removes tweets with 2 or fewer tokens
-
-
-y <- factor(docvars(tweets.tokens, "handle"))
-
-tweets.dfm <- dfm(tweets.tokens)
-dim(tweets.dfm)
-
-```
 
 ```{r}
 library(readr)

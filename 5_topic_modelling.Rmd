@@ -1,6 +1,89 @@
 #topic modelling
 
-```{r}
+```{r message=FALSE, warning=FALSE}
+corpus_final <- read_csv("data supervised_L/corpus_final.csv")
+corpus_final <- corpus(corpus_final$text, corpus_final$screen_name)
+
+#start with 3 dim
+library(quanteda)
+library(quanteda.textmodels)
+tweet.dfm <- dfm(corpus_final,
+                 remove_punct = TRUE, remove = stopwords("english"),
+                 remove_numbers=TRUE)
+
+dimsetup <- textmodel_lsa(tweet.dfm, nd=3)
+
+#analyze the correlation
+ns <- apply(tweet.dfm, 1, sum) # row-sum of the DTM. Are you convinced it is the document length?
+plot(ns~dimsetup$docs[,1])
+```
+
+
+
+```{r message=FALSE, warning=FALSE}
+
+x <- dimsetup$features[,2:3] %>% as.data.frame()
+row.names.remove <- c("u","t","co ","https","http","s","amp","re","m","ll", "co", "we")
+x <- x[!(row.names(x) %in% row.names.remove), ]
+
+
+
+biplot(y= dimsetup$docs[,2:3],x= x, col=c("grey","red"),
+       xlab = "Dim 2", ylab="Dim 3")
+
+n.terms <- 10
+sort(abs(dimsetup$features[,1]), decreasing = TRUE)[1:n.terms]
+t(t(sort(dimsetup$features[,2], decreasing = TRUE)[c(1:n.terms, nrow(dimsetup$features)-c(n.terms:1)+1)]))
+t(t(sort(dimsetup$features[,3], decreasing = TRUE)[c(1:n.terms, nrow(dimsetup$features)-c(n.terms:1)+1)]))
+```
+
+#LDA
+```{r message=FALSE, warning=FALSE}
+## LDA
+library(topicmodels)
+
+K <- 8
+tweet.dtm <- convert(tweet.dfm, to = "topicmodels")
+lda <- LDA(tweet.dfm, k = K) 
+terms(lda, 5) 
+## topics(lda, 1) # long object
+
+## show the betas of each document
+beta.td <- tidy(lda, matrix = "beta") # beta's are turned to proba scales
+beta.td 
+
+badwords <- c("u","t","co ","https","http","s","amp","re","m","ll", "co", "we")
+beta.td <- beta.td[ !grepl(paste(badwords, collapse="|"), beta.td$term),]
+
+
+
+
+## describes the topics with their most associated terms
+beta.top.terms <- beta.td %>%
+  group_by(topic) %>%
+  top_n(10, beta) %>%
+  ungroup() %>%
+  arrange(topic, -beta)
+
+
+#on pourrait enlever le mot people peut-être
+beta.top.terms %>%
+  mutate(term = reorder_within(term, beta, topic)) %>%
+  ggplot(aes(term, beta, fill = factor(topic))) +
+  geom_col(show.legend = FALSE) +
+  facet_wrap(~ topic, scales = "free") +
+  coord_flip() +
+  scale_x_reordered()
+
+## describes the topics in each documents
+gamma.td <- tidy(lda, matrix = "gamma")
+gamma.td %>%
+  ggplot(aes(document, gamma, fill = factor(topic))) +
+  geom_col(show.legend = FALSE) +
+  facet_wrap(~ topic, scales = "free") +
+  coord_flip() +
+  scale_x_reordered()
+
 
 ```
 

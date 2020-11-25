@@ -1,13 +1,13 @@
 
 ```{r setup, include=FALSE}
 #ici les données sont avant et après, il y a toujours moyen de les filtrer selon les besoin
-f <- file.path(here("data supervised_L/"), c("biden_after.csv","kamala_after.csv", "trump_after.csv", "vp_after.csv"))
+f <- file.path(here("data supervised_L/"), c("biden_after.csv","kamala_after.csv", "trump_after.csv", "vp_after.csv", "obama_after.csv", "aoc_after.csv"))
 d <- lapply(f, read.csv)
 str(d, give.attr = FALSE)
 
-d <- Map(cbind, d, name = c("Biden", "Kamala", "Trump", "VP"))
+d <- Map(cbind, d, name = c("Biden", "Kamala", "Trump", "VP", "obama", "aoc"))
 
-tweet_all <- rbind(d[[1]], d[[2]], d[[3]], d[[4]])
+tweet_all <- rbind(d[[1]], d[[2]], d[[3]], d[[4]],d[[5]],d[[6]])
 tweets.corpus <- corpus(tweet_all)
 
 
@@ -30,7 +30,28 @@ y <- factor(docvars(tweets.tokens, "screen_name")) #ici y = celui qui à écrit 
 
 tweets.dfm <- dfm(tweets.tokens)
 dim(tweets.dfm)
+
+library(quanteda.textmodels)
+#essayer différente dim
+
+tweets.lsa <- textmodel_lsa(tweets.dfm, nd=25)
+head(tweets.lsa$docs)
+
+df <- data.frame(Class=y, X=tweets.lsa$docs)
+index.tr <- sample(size=round(0.8*length(y)), x=c(1:length(y)), replace=FALSE)
+df.tr <- df[index.tr,]
+df.te <- df[-index.tr,]
+library(ranger)
+tweets.fit <- ranger(Class ~ ., 
+                     data = df.tr)
+pred.te <- predict(tweets.fit, df.te)
+
+library(caret)
+confusionMatrix(data=pred.te$predictions, reference = df.te$Class)
 ```
+
+
+
 
 
 # Analysis GAETAN

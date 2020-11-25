@@ -1,0 +1,238 @@
+#EDA
+
+```{r}
+corpus <- read_csv("data supervised_L/corpus_final.csv")
+
+tweet.tb <- as_tibble(data.frame(corpus))
+tweet.tok <- unnest_tokens(tweet.tb, output="word", input="text", to_lower=TRUE, strip_punct=TRUE, 
+                           strip_numeric=TRUE)
+
+## Remove stopwords 
+tweet.tok <- anti_join(tweet.tok, stop_words, by = "word")
+tweet.fr <- tweet.tok %>% group_by(screen_name) %>% count(word, sort=TRUE) %>% ungroup()
+
+#remove word
+tweet.fr <- tweet.fr[tweet.fr$word != "https" & tweet.fr$word != "http" & tweet.fr$word != "amp" & tweet.fr$word != "fe", ]  
+
+#most used words
+index <- top_n(tweet.fr, 15)
+tweet.fr %>% filter(word %in% index$word) %>% 
+  ggplot(aes(x=word, y=n)) + geom_col() + coord_flip() +facet_wrap(~screen_name, ncol = 2)+
+  labs(title="The most frequently used words",
+        x ="n", y = "word")
+
+index <- tweet.fr %>% group_by(screen_name) %>% top_n(2)
+tweet.fr %>% filter(word %in% index$word) %>% ggplot(aes(word, n)) + geom_col() + coord_flip() +facet_wrap(~screen_name, ncol = 2)
+```
+#by tf-idf
+```{r}
+tweet.tfidf <- bind_tf_idf(tbl=tweet.fr, term=word, document=screen_name, n=n)
+
+index <- tweet.tfidf %>% group_by(screen_name) %>% top_n(1)
+
+tweet.tfidf %>% filter(word %in% index$word) %>% 
+  ggplot(aes(word, tf_idf)) + geom_col() + coord_flip() +facet_wrap(~screen_name, ncol = 2)
+```
+#wordcloud
+```{r message=FALSE, warning=FALSE}
+tweet.fr <- aggregate(n~word, FUN = sum, data=tweet.fr)
+wordcloud(words=tweet.fr$word, freq=tweet.fr$n, max.words=120, random.order=FALSE, rot.per=0.35, 
+          colors=brewer.pal(8, "Dark2")) 
+```
+#Trump analysis
+```{r message=FALSE, warning=FALSE}
+trump <- read_csv("data supervised_L/trump_after.csv")
+trump <- trump %>% 
+  select(text)
+
+#remove useless words
+trump <- gsub("amp","", trump)
+trump <- gsub("t.co","", trump)
+trump <- gsub("https","", trump)
+trump <- as_tibble(trump)
+
+trump <- as_tibble(data.frame(trump))
+
+trump.tok <- unnest_tokens(trump, output="word", input="value", to_lower=TRUE, strip_punct=TRUE, 
+                           strip_numeric=TRUE)
+
+#remove stop word
+trump.tok <- anti_join(trump.tok, stop_words, by = "word")
+#count the word
+trump.tok <- trump.tok %>%  count(word, sort=TRUE) %>% ungroup()
+#wordcloud
+trump.tok <- trump.tok 
+wordcloud(words=trump.tok$word, freq=trump.tok$n, max.words=120, random.order=FALSE, rot.per=0.35, 
+          colors=brewer.pal(8, "Dark2"))
+
+trump.tok %>% top_n(15) %>% 
+  ggplot(aes(x = n, y = reorder(word, n)))+
+  geom_bar(stat = "identity")
+```
+#biden analysis
+```{r message=FALSE, warning=FALSE}
+biden <- read_csv("data supervised_L/biden_after.csv")
+biden <- biden %>% 
+  select(text)
+
+#remove useless words
+biden <- gsub("amp","", biden)
+biden <- gsub("t.co","", biden)
+biden <- gsub("https","", biden)
+biden <- as_tibble(biden)
+
+biden <- as_tibble(data.frame(biden))
+
+biden.tok <- unnest_tokens(biden, output="word", input="value", to_lower=TRUE, strip_punct=TRUE, 
+                           strip_numeric=TRUE)
+
+#remove stop word
+biden.tok <- anti_join(biden.tok, stop_words, by = "word")
+#count the word
+biden.tok <- biden.tok %>%  count(word, sort=TRUE) %>% ungroup()
+#wordcloud
+biden.tok <- biden.tok 
+wordcloud(words=biden.tok$word, freq=biden.tok$n, max.words=120, random.order=FALSE, rot.per=0.35, 
+          colors=brewer.pal(8, "Dark2"))
+
+biden.tok %>% top_n(15) %>% 
+  ggplot(aes(x = n, y = reorder(word, n)))+
+  geom_bar(stat = "identity")
+```
+
+
+#Zipf's law
+```{r}
+tweet.cp <- corpus(corpus$text)
+
+tweet.tk <- tokens(tweet.cp, remove_numbers=TRUE, remove_punct=TRUE, remove_symbols=TRUE, remove_separators=TRUE)
+## crude.tk # un-comment this line
+tweet.tk <- tweet.tk %>% tokens_tolower() %>% tokens_remove(stopwords("english")) %>% tokens_remove("reuter")
+## crude.tk # un-comment this line
+tweet.dfm <- dfm(tweet.tk)
+
+tweet.tfidf <- dfm_tfidf(tweet.dfm)
+
+tweet.freq <- textstat_frequency(tweet.dfm)
+## Illustration of the Zipf's law
+plot(frequency~rank, data=tweet.freq, pch=20)
+#log transformation
+plot(log(frequency)~log(rank), data=tweet.freq, pch=20)
+text(log(frequency)~log(rank), data=tweet.freq[1:10,], label=feature, pos=10)
+```
+#lexical diversity
+```{r}
+tweet.cp <- corpus(corpus$text, corpus$screen_name)
+tweet.dfm <- dfm(tweet.cp,
+                   stem=FALSE,
+                   tolower=TRUE,
+                   remove=c("reuter",stopwords("english")),
+                   remove_punct=TRUE,
+                   remove_number=TRUE,
+                   remove_symbols=TRUE)
+tweet.div <- textstat_lexdiv(tweet.dfm, measure = "I")
+tweet.div %>% 
+  ggplot(aes(x=reorder(document, I), y=I))+geom_point()+coord_flip()+
+  xlab("Text") + ylab("Yule's index")
+```
+#MATTR
+```{r}
+tweet.cp <- corpus(corpus$text, corpus$screen_name)
+tweet.tok <- tokens(tweet.cp,
+                    remove_punct=TRUE,
+                    remove_number=TRUE,
+                    remove_symbols = TRUE)
+tweet.tok <- tokens_remove(tweet.tok, pattern = c("reuter",stopwords("english")))
+tweet.tok <- tokens_tolower(tweet.tok)
+tweet.div <- textstat_lexdiv(tweet.tok, measure = "MATTR", MATTR_window = 10)
+tweet.div %>% 
+  ggplot(aes(x=reorder(document, MATTR), y=MATTR))+geom_point()+coord_flip()+
+  xlab("Text") + ylab("MATTR")
+```
+#x-ray plot
+#on peut jouer un moment avec ce code 
+```{r}
+head(kwic(tweet.cp, pattern = "president")) # check the result
+textplot_xray(kwic(tweet.cp, pattern = "trump"),
+              kwic(tweet.cp, pattern = "biden"))
+```
+
+#keyness
+```{r message=FALSE, warning=FALSE}
+corpus <- read_csv("data supervised_L/corpus_final.csv")
+corpus <- corpus(corpus$text, corpus$screen_name)
+tweet.tok <- tokens(corpus,
+                     remove_punct = TRUE,
+                     remove_symbols = TRUE,
+                     remove_numbers = TRUE)
+library(lexicon) # needed for hash_lemmas used below for the lemmatization
+tweet.tok <- tokens_replace(tweet.tok, pattern=hash_lemmas$token, replacement = hash_lemmas$lemma)
+tweet.tok <- tokens_remove(tweet.tok, pattern = c("u", "amp", "t","co", "https", stopwords("english"))) 
+
+## create the dfm
+tweet.dfm <- dfm(tweet.tok)
+# 15 most frequents terms
+textstat_frequency(tweet.dfm, n = 10) %>% 
+  ggplot(aes(x = reorder(feature, frequency), y = frequency)) +
+  geom_point() +
+  labs(x = "Term", y = "Frequency") + coord_flip()
+
+## create the tf-idf; represent the 10 largest ones
+tweet.tok2 <- tokens(corpus_subset(corpus),
+                      remove_punct = TRUE,
+                      remove_symbols = TRUE,
+                      remove_numbers = TRUE) %>%  
+  tokens_replace(pattern=hash_lemmas$token, replacement = hash_lemmas$lemma) %>% 
+  tokens_remove(pattern = c("u", "amp", "t","co", "https", "http", "gsfsghkmdm", "eoxt", stopwords("english")))
+  
+
+tweet.tfidf <- dfm(tweet.tok2) %>% dfm_tfidf() %>% tidy()
+
+tweet.tfidf %>%
+  top_n(10) %>% 
+  ggplot(aes(term, count, fill = document)) +
+  geom_col(show.legend = FALSE) +
+  labs(x = NULL, y = "tf-idf") + coord_flip() + 
+  facet_wrap(~document, ncol = 2)
+
+## Compare the speeches in terms of lexical diversity
+textstat_lexdiv(tweet.tok, measure = "I") %>% 
+  ggplot(aes(x=reorder(document, I), y=I))+geom_point()+coord_flip()+
+  xlab("Text") + ylab("Yule's index")
+#keyness compare biden et trump
+corpus <- read_csv("data supervised_L/corpus_final.csv")
+corpus_key <- corpus(corpus,text_field = "text")
+
+tweet.key <- tokens(corpus_subset(corpus_key, screen_name %in% c("realDonaldTrump", "JoeBiden")),
+                      remove_punct = TRUE,
+                      remove_symbols = TRUE,
+                      remove_numbers = TRUE) %>%
+  tokens_replace(pattern=hash_lemmas$token, replacement = hash_lemmas$lemma) %>%
+  tokens_remove(pattern = c("s", "amp", "de","la", "en", "t","re","gsgsgh", stopwords("english")))
+tweet.key %>% dfm(groups="screen_name") %>% textstat_keyness(target="realDonaldTrump") %>% textplot_keyness()
+
+#create the variable "party"
+party <- c("republican", "republican", "democrate", "democrate" , "democrate", "democrate")
+corpus_key_party <- cbind(corpus,party)
+corpus_key_party <- corpus(corpus_key_party,text_field = "text")
+
+## Compare the tweets of republican vs to the tweets of democrat in terms of keyness
+tweet.key_party <- tokens(corpus_subset(corpus_key_party, party %in% c("democrate", "republican")),
+                      remove_punct = TRUE,
+                      remove_symbols = TRUE,
+                      remove_numbers = TRUE) %>%
+  tokens_replace(pattern=hash_lemmas$token, replacement = hash_lemmas$lemma) %>%
+  tokens_remove(pattern = c("s", "amp", "de","la", "en", "t", "u", "re", "http", stopwords("english")))
+tweet.key_party %>% dfm(groups="party") %>% textstat_keyness(target="republican") %>% textplot_keyness()
+
+## Compare the tweets of kamala vs to the tweets of vp in terms of keyness
+tweet.key2 <- tokens(corpus_subset(corpus_key_party, screen_name %in% c("KamalaHarris", "VP")),
+                      remove_punct = TRUE,
+                      remove_symbols = TRUE,
+                      remove_numbers = TRUE) %>%
+  tokens_replace(pattern=hash_lemmas$token, replacement = hash_lemmas$lemma) %>%
+  tokens_remove(pattern = c("s", "amp", "de","la", "en", "t", "https", stopwords("english")))
+tweet.key2 %>% dfm(groups="screen_name") %>% textstat_keyness(target="KamalaHarris") %>% textplot_keyness()
+
+
+```

@@ -33,6 +33,14 @@ tweet_biden_hashtag <- search_tweets(
 #the vice president selected by biden if he is elected 
 tweet_KAMALA <- get_timelines("KamalaHarris", n = 3000, 
             include_rts = FALSE)
+
+#obama
+tweet_OBAMA <- get_timelines("BarackObama", n = 3000, 
+            include_rts = FALSE)       
+
+#Alexandria Ocasio-Cortez
+tweet_ACO <- get_timelines("AOC", n = 3000, 
+            include_rts = FALSE)    
 ```
 
 ### explain the data
@@ -295,6 +303,11 @@ tweet_biden_hashtag = data.frame(lapply(tweet_biden_hashtag, as.character), stri
 
 write.csv(tweet_trump_hashtag, "data supervised_L\\hashtag_trump_after.csv", row.names=FALSE)
 write.csv(tweet_biden_hashtag, "data supervised_L\\hashtag_biden_after.csv", row.names=FALSE)
+#obama et AOC
+tweet_obama = data.frame(lapply(tweet_OBAMA, as.character), stringsAsFactors=FALSE)
+tweet_aoc = data.frame(lapply(tweet_ACO, as.character), stringsAsFactors=FALSE)
 
+write.csv(tweet_obama, "data supervised_L\\obama_after.csv", row.names=FALSE)
+write.csv(tweet_aoc, "data supervised_L\\aoc_after.csv", row.names=FALSE)
 
 ```

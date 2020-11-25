@@ -1,0 +1,63 @@
+#sentiment analysis
+
+```{r message=FALSE, warning=FALSE}
+
+corpus_final_before_after <- read_csv("data supervised_L/corpus_final_before_after.csv")
+corpus_final <- read_csv("data supervised_L/corpus_final.csv")
+
+tweet.tb <- as_tibble(data.frame(corpus_final))
+tweet.tok <- unnest_tokens(tweet.tb, output="word", input="text", to_lower=TRUE, strip_punct=TRUE, 
+                           strip_numeric=TRUE)
+
+tweet.sent <- tweet.tok %>%
+  inner_join(get_sentiments("nrc"))
+
+tweet.sent %>% group_by(screen_name, sentiment) %>% summarize(n = n()) %>% 
+  ggplot(aes(x = sentiment, y = n, fill = sentiment)) + 
+  geom_bar(stat = "identity", alpha = 0.8) + 
+  facet_wrap(~ screen_name) + coord_flip()
+
+#the same but scale with the length
+
+tweet.tb <- as_tibble(data.frame(corpus_final_before_after))
+tweet.tok <- unnest_tokens(tweet.tb, output="word", input="text", to_lower=TRUE, strip_punct=TRUE, 
+                           strip_numeric=TRUE)
+
+tweet.sent <- tweet.tok %>%
+  inner_join(get_sentiments("nrc"))
+
+tweet.sent %>% group_by(Document, sentiment) %>%  summarize(n = n()) %>% 
+  mutate(freq = n / sum(n)) %>% ggplot(aes(x = sentiment, y = freq, fill = sentiment)) + 
+  geom_bar(stat = "identity", alpha = 0.8) + 
+  facet_wrap(~ Document) + coord_flip()
+```
+# on peut voir que tousles documents doc sont positif 
+```{r message=FALSE, warning=FALSE}
+tweet.sent <- tweet.tok %>%
+  inner_join(get_sentiments("afinn"))
+## Summarize per document (value average) + barplot
+aggregate(value~screen_name, data=tweet.sent, FUN=mean)
+
+
+aggregate(value~screen_name, data=tweet.sent, FUN=mean) %>% 
+  ggplot(aes(x = screen_name, y = value)) + 
+  geom_bar(stat = "identity") + coord_flip()
+```
+#using valence shifter
+je ne sais pas si c'est pertinent pour des tweets
+
+#```{r}
+library(sentimentr)
+library(lexicon)
+
+tweet.text <- get_sentences(corpus_final$text)
+(tweet.senti <- sentiment(tweet.text))
+
+tweet.senti <- as_tibble(tweet.senti)
+
+tweet.senti %>% group_by(element_id) %>% 
+  ggplot(aes(x = sentence_id, y = sentiment)) + 
+  geom_line() + 
+  facet_wrap(~ element_id) 
+```
+

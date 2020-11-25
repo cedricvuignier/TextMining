@@ -414,3 +414,105 @@ tweet.div %>%
   xlab("Text") + ylab("MATTR")
 ```
 
+
+
+#clean the corpus
+I have seen many things qui vont pas et qu'on doit nettoyer 
+```{r}
+corpus <- read_csv("data supervised_L/corpus.csv")
+corpus <- corpus %>% mutate(Document=paste(when,"_",screen_name,sep="")) 
+# Set the text to lowercase
+corpus$text <- tolower(corpus$text)
+# Remove mentions, urls, emojis, numbers, punctuations, etc.
+corpus$text <- gsub("@\\w+", "", corpus$text)
+corpus$text <- gsub("\\d+\\w*\\d*", "", corpus$text)
+corpus$text <- gsub("#\\w+", "", corpus$text)
+corpus$text <- gsub("[^\x01-\x7F]", "", corpus$text)
+corpus$text <- gsub("[[:punct:]]", " ", corpus$text)
+
+
+corpus_final = data.frame(lapply(corpus, as.character), stringsAsFactors=FALSE)
+
+write.csv(corpus_final, "data supervised_L\\corpus_final.csv", row.names=FALSE)
+```
+
+
+
+```{r }
+library(readr)
+library(quanteda)
+
+tweet.ana <- corpus(corpus$text)
+tweet.tfidf <- dfm_tfidf(dfm(tweet.ana, remove_punct = TRUE, remove_numbers=TRUE,remove_symbols=TRUE,
+                             remove = stopwords("english")))
+
+tweet.jac <- textstat_simil(tweet.tfidf, method = "jaccard")
+
+library(reshape2)
+library(ggplot2)
+## Jaccard 
+tweet.jac.mat <- melt(as.matrix(tweet.jac)) # Convert the object to matrix then to data frame 
+ggplot(data = tweet.jac.mat, aes(x=Var1, y=Var2, fill=value))+
+  scale_fill_gradient2(low = "blue", high = "red", mid = "white", 
+                       midpoint = 0.5, limit = c(0,1), name="Jaccard")+
+  geom_tile()
+
+###############################################################
+tweet.hc <- hclust(dist(tweet.jac))
+## crude.hc <- hclust(dist(1 - crude.jac)) # use this line for Jaccard
+## crude.hc <- hclust(dist(1 - crude.cos)) # use this line for Cosine
+plot(tweet.hc)
+```
+# topic modelling
+##LSA
+```{r}
+corpus <- read_csv("data supervised_L/corpus.csv")
+
+
+
+library(quanteda)
+library(quanteda.textmodels)
+tweet.ana <- corpus(corpus$text, corpus$Document)
+tweet.dfm <- dfm(tweet.ana,
+                 remove_punct = TRUE, remove = stopwords("english"),
+                 remove_numbers=TRUE)
+lsa <- textmodel_lsa(tweet.dfm, nd=3) 
+
+ns <- apply(tweet.dfm, 1, sum) # row-sum of the DTM. Are you convinced it is the document length?
+plot(ns~lsa$docs[,1])
+
+biplot(y=lsa$docs[,2:3],x=lsa$features[,2:3], col=c("grey","red"),
+       xlab = "Dim 2", ylab="Dim 3")
+
+
+```
+#LDA
+```{r}
+## TF-IDF
+library(topicmodels)
+## convert quateda object to topicmodels object
+K <- 3
+tweet.dtm <- convert(tweet.dfm, to = "topicmodels")
+lda <- LDA(tweet.dtm, k = K) 
+
+#show results by topic 
+beta.lda <- tidy(lda, matrix = "beta") # beta's are turned to proba scales
+beta.lda
+
+
+## describes the topics with their most associated terms
+beta.top <- beta.lda %>%
+  group_by(topic) %>%
+  top_n(10, beta) %>%
+  ungroup() %>%
+  arrange(topic, -beta)
+
+beta.top %>%
+  mutate(term = reorder_within(term, beta, topic)) %>%
+  ggplot(aes(term, beta, fill = factor(topic))) +
+  geom_col(show.legend = FALSE) +
+  facet_wrap(~ topic, scales = "free") +
+  coord_flip() +
+  scale_x_reordered()
+```
+

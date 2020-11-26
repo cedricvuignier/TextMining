@@ -96,8 +96,8 @@ gamma.td %>%
 ```
 #word embedding
 ```{r message=FALSE, warning=FALSE}
-corpus_final <- read_csv("data supervised_L/corpus_final_before_after.csv")
-corpus_final <- corpus(corpus_final$text, corpus_final$Document)
+corpus_final <- read_csv("data supervised_L/corpus_final.csv")
+corpus_final <- corpus(corpus_final$text, corpus_final$screen_name)
 
 tweet.cp <- corpus_final
 tweet.tk <- tokens(tweet.cp,

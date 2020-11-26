@@ -60,7 +60,7 @@ aggregate(value~Document, data=tweet.sent, FUN=mean) %>%
 #using valence shifter
 je ne sais pas si c'est pertinent pour des tweets
 
-#```{r}
+```{r}
 library(sentimentr)
 library(lexicon)
 

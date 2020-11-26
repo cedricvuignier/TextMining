@@ -11,7 +11,7 @@ tweet.dfm <- dfm(corpus_final,
                  remove_punct = TRUE, remove = stopwords("english"),
                  remove_numbers=TRUE)
 
-dimsetup <- textmodel_lsa(tweet.dfm, nd=3)
+dimsetup <- textmodel_lsa(tweet.dfm, nd=4)
 
 #analyze the correlation
 ns <- apply(tweet.dfm, 1, sum) # row-sum of the DTM. Are you convinced it is the document length?
@@ -23,13 +23,21 @@ plot(ns~dimsetup$docs[,1])
 ```{r message=FALSE, warning=FALSE}
 
 x <- dimsetup$features[,2:3] %>% as.data.frame()
-row.names.remove <- c("u","t","co ","https","http","s","amp","re","m","ll", "co", "we")
+row.names.remove <- c("u","t","co ","https","http","s","amp","re","m","ll", "co", "we", "obama1")
 x <- x[!(row.names(x) %in% row.names.remove), ]
 
+x1 <- x %>%
+          filter(V1>0.06 | V2>0.06)
 
+x2 <- x %>%
+          filter(V1< -0.06 | V2< -0.06) 
+
+x <- rbind(x1, x2, by=0, all=TRUE)
+x <- x[!(row.names(x) %in% row.names.remove), ]
 
 biplot(y= dimsetup$docs[,2:3],x= x, col=c("grey","red"),
-       xlab = "Dim 2", ylab="Dim 3")
+       xlab = "Dim 2", ylab="Dim 3",expand=2, xlim=c(-0.40, 0.4), ylim=c(-0.4, 0.4))
+
 
 n.terms <- 10
 sort(abs(dimsetup$features[,1]), decreasing = TRUE)[1:n.terms]
@@ -85,5 +93,62 @@ gamma.td %>%
   scale_x_reordered()
 
 
+```
+#word embedding
+```{r message=FALSE, warning=FALSE}
+corpus_final <- read_csv("data supervised_L/corpus_final_before_after.csv")
+corpus_final <- corpus(corpus_final$text, corpus_final$Document)
+
+tweet.cp <- corpus_final
+tweet.tk <- tokens(tweet.cp,
+                   remove_punct = TRUE,
+                   remove_symbols = TRUE,
+                   remove_numbers = TRUE) %>% tokens_tolower() %>%
+  tokens_replace(pattern=hash_lemmas$token, replacement = hash_lemmas$lemma) %>%
+  tokens_remove(pattern = c("s", "amp", "de","la", "en", "t","re","gsgsgh",
+                            "u","t","co ","https","http","s","amp","re","m","ll", "co", "we", stopwords("english"))) 
+
+
+
+
+tweet.coo <- fcm(tweet.tk, context="window", window = 5, tri=FALSE) 
+
+library(text2vec)
+p <- 2 # word embedding dimension
+tweet.glove <- GlobalVectors$new(rank = p, x_max = 10) # x_max is a needed technical option
+tweet.weC <- tweet.glove$fit_transform(tweet.coo)
+tweet.we <- t(tweet.glove$components)+tweet.weC
+
+n.w <- apply(dfm(tweet.tk),2,sum) ## compute the number of times ech term is used
+index <- order(n.w, decreasing = TRUE)[1:60] # select the row-number corresponding to the 50 largest n.w
+
+plot(tweet.we[index,], type='n',  xlab="Dim 1", ylab="Dim 2")
+text(x=tweet.we[index,], labels=rownames(tweet.we[index,]))
+```
+
+```{r}
+
+nd <- length(tweet.tk) # number of documents
+tweet.de <- matrix(nr=nd, nc=p) # document embedding matrix (1 document per row)
+for (i in 1:nd){
+  words_in_i <- tweet.we[tweet.tk[[i]],]
+  tweet.de[i,] <- apply(words_in_i,2,mean)
+}
+row.names(tweet.de) <- names(tweet.cp)
+## tweet.de
+
+plot(tweet.de, type='n',  xlab="Dim 1", ylab="Dim 2", main="Centroids")
+text(x=tweet.de, labels=rownames(tweet.de))
+
+```
+
+```{r}
+tweet.dtm <- dfm(tweet.tk)
+tweet.rwmd.model <- RelaxedWordMoversDistance$new(tweet.dtm, tweet.we)
+tweet.rwms <- tweet.rwmd.model$sim2(tweet.dtm)
+tweet.rwmd <- tweet.rwmd.model$dist2(tweet.dtm)
+
+tweet.hc <- hclust(as.dist(tweet.rwmd))
+plot(tweet.hc, cex=0.8)
 ```
 

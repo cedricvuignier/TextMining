@@ -42,6 +42,20 @@ aggregate(value~screen_name, data=tweet.sent, FUN=mean)
 aggregate(value~screen_name, data=tweet.sent, FUN=mean) %>% 
   ggplot(aes(x = screen_name, y = value)) + 
   geom_bar(stat = "identity") + coord_flip()
+######################before after#######################
+tweet.tb <- as_tibble(data.frame(corpus_final_before_after))
+tweet.tok <- unnest_tokens(tweet.tb, output="word", input="text", to_lower=TRUE, strip_punct=TRUE, 
+                           strip_numeric=TRUE)
+
+tweet.sent <- tweet.tok %>%
+  inner_join(get_sentiments("afinn"))
+## Summarize per document (value average) + barplot
+aggregate(value~Document, data=tweet.sent, FUN=mean)
+
+
+aggregate(value~Document, data=tweet.sent, FUN=mean) %>% 
+  ggplot(aes(x = Document, y = value)) + 
+  geom_bar(stat = "identity") + coord_flip()
 ```
 #using valence shifter
 je ne sais pas si c'est pertinent pour des tweets

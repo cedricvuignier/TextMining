@@ -155,6 +155,12 @@ tweet.div %>%
 head(kwic(tweet.cp, pattern = "president")) # check the result
 textplot_xray(kwic(tweet.cp, pattern = "trump"),
               kwic(tweet.cp, pattern = "biden"))
+
+textplot_xray(kwic(tweet.cp, pattern = "covid"),
+              kwic(tweet.cp, pattern = "health"))
+
+textplot_xray(kwic(tweet.cp, pattern = "fake"),
+              kwic(tweet.cp, pattern = "fraud"))
 ```
 
 #keyness

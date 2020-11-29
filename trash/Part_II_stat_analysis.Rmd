@@ -176,6 +176,17 @@ tweet_all %>%  select(-name) %>%
     full_width = F,
     position = "left"
   )
+
+#geom line
+
+tweet_all %>%  select(-name) %>% 
+  mutate(date_created = date(created_at)) %>% 
+  filter(date_created >= "2020-10-20" & date_created <= "2020-11-17") %>%
+  group_by(date_created, screen_name) %>% 
+  count() %>% 
+  ggplot(aes( x = date_created, y = n,
+              colour = screen_name ))+
+  geom_line()
   
 ```
 

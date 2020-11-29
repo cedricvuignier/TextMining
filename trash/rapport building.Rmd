@@ -1,0 +1,15 @@
+```{r}
+#trump
+test1 <- tweet_all %>% 
+  select(screen_name, text, source, display_text_width,retweet_count, favorite_count) %>% 
+ kable(caption = "Initial data base", col.names = c("username", "tweet", "source",
+                                                                  "length", "retweet", "favorite")) %>%
+  kable_styling(
+    bootstrap_options = "striped",
+    full_width = F,
+    position = "left"
+  )
+
+
+```
+

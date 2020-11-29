@@ -7,14 +7,17 @@ j'ai créé 2 corpus
 ```{r}
 # trump analysis
 TRUMP_all_tweet <- read_csv("data supervised_L/trump_after.csv")
+
 #get only the tweets after the election
 Trump_after_analysis <- TRUMP_all_tweet %>% 
-  mutate(date = date(created_at)) %>% 
-  filter(date >= "2020-11-03")
+  mutate(date = date(created_at)) %>% filter(date >= "2020-11-03", 
+                                             display_text_width > 100)
 #get the tweet before
 Trump_before_analysis <- TRUMP_all_tweet %>% 
-  mutate(date = date(created_at)) %>% 
-  filter(date < "2020-11-03")
+  mutate(date = date(created_at)) %>% filter(date < "2020-11-03", 
+                                             display_text_width > 100)
+
+
 #add variable before or after
 Trump_after_analysis <-Trump_after_analysis %>% 
   mutate(when = "after")
@@ -22,19 +25,21 @@ Trump_after_analysis <-Trump_after_analysis %>%
 Trump_before_analysis <-Trump_before_analysis %>% 
   mutate(when = "before")
 #############
+
+#book of tweets "after" 
 Trump_after_analysis <- Trump_after_analysis %>% 
   select(text,screen_name, when) %>% 
   group_by(screen_name, when) %>% 
-  summarise(paste(Trump_after_analysis$text, collapse = ' ')) 
+  summarise(paste(Trump_after_analysis$text, collapse = '. ')) 
 
-Trump_after_analysis <- rename(Trump_after_analysis, text = `paste(Trump_after_analysis$text, collapse = " ")`)
-  
+Trump_after_analysis <- rename(Trump_after_analysis, text = `paste(Trump_after_analysis$text, collapse = ". ")`)
+#book of tweets "before"  
 Trump_before_analysis <- Trump_before_analysis %>% 
   select(text,screen_name, when) %>% 
   group_by(screen_name, when) %>% 
-  summarise(paste(Trump_before_analysis$text, collapse = ' ')) 
+  summarise(paste(Trump_before_analysis$text, collapse = '. ')) 
 
-Trump_before_analysis <- rename(Trump_before_analysis, text = `paste(Trump_before_analysis$text, collapse = " ")`)
+Trump_before_analysis <- rename(Trump_before_analysis, text = `paste(Trump_before_analysis$text, collapse = ". ")`)
 
 
 # vp analysis
@@ -42,11 +47,13 @@ vp_all_tweet <- read_csv("data supervised_L/vp_after.csv")
 #get only the tweets after the election
 vp_after_analysis <- vp_all_tweet %>% 
   mutate(date = date(created_at)) %>% 
-  filter(date >= "2020-11-03")
+  filter(date >= "2020-11-03",
+        display_text_width > 100)
 #get the tweet before
 vp_before_analysis <- vp_all_tweet %>% 
   mutate(date = date(created_at)) %>% 
-  filter(date < "2020-11-03")
+  filter(date < "2020-11-03",
+        display_text_width > 100)
 #add variable before or after
 vp_after_analysis <-vp_after_analysis %>% 
   mutate(when = "after")
@@ -57,27 +64,29 @@ vp_before_analysis <-vp_before_analysis %>%
 vp_after_analysis <- vp_after_analysis %>% 
   select(text,screen_name, when) %>% 
   group_by(screen_name, when) %>% 
-  summarise(paste(vp_after_analysis$text, collapse = ' ')) 
+  summarise(paste(vp_after_analysis$text, collapse = '. ')) 
 
-vp_after_analysis <- rename(vp_after_analysis, text = `paste(vp_after_analysis$text, collapse = " ")`)
+vp_after_analysis <- rename(vp_after_analysis, text = `paste(vp_after_analysis$text, collapse = ". ")`)
   
 vp_before_analysis <- vp_before_analysis %>% 
   select(text,screen_name, when) %>% 
   group_by(screen_name, when) %>% 
-  summarise(paste(vp_before_analysis$text, collapse = ' ')) 
+  summarise(paste(vp_before_analysis$text, collapse = '. ')) 
 
-vp_before_analysis <- rename(vp_before_analysis, text = `paste(vp_before_analysis$text, collapse = " ")`)
+vp_before_analysis <- rename(vp_before_analysis, text = `paste(vp_before_analysis$text, collapse = ". ")`)
 
 # biden analysis
 biden_all_tweet <- read_csv("data supervised_L/biden_after.csv")
 #get only the tweets after the election
 biden_after_analysis <- biden_all_tweet %>% 
   mutate(date = date(created_at)) %>% 
-  filter(date >= "2020-11-03")
+  filter(date >= "2020-11-03",
+        display_text_width > 100)
 #get the tweet before
 biden_before_analysis <- biden_all_tweet %>% 
   mutate(date = date(created_at)) %>% 
-  filter(date < "2020-11-03")
+  filter(date < "2020-11-03",
+        display_text_width > 100)
 #add variable before or after
 biden_after_analysis <-biden_after_analysis %>% 
   mutate(when = "after")
@@ -88,27 +97,29 @@ biden_before_analysis <-biden_before_analysis %>%
 biden_after_analysis <- biden_after_analysis %>% 
   select(text,screen_name, when) %>% 
   group_by(screen_name, when) %>% 
-  summarise(paste(biden_after_analysis$text, collapse = ' ')) 
+  summarise(paste(biden_after_analysis$text, collapse = '. ')) 
 
-biden_after_analysis <- rename(biden_after_analysis, text = `paste(biden_after_analysis$text, collapse = " ")`)
+biden_after_analysis <- rename(biden_after_analysis, text = `paste(biden_after_analysis$text, collapse = ". ")`)
   
 biden_before_analysis <- biden_before_analysis %>% 
   select(text,screen_name, when) %>% 
   group_by(screen_name, when) %>% 
-  summarise(paste(biden_before_analysis$text, collapse = ' ')) 
+  summarise(paste(biden_before_analysis$text, collapse = '. ')) 
 
-biden_before_analysis <- rename(biden_before_analysis, text = `paste(biden_before_analysis$text, collapse = " ")`)
+biden_before_analysis <- rename(biden_before_analysis, text = `paste(biden_before_analysis$text, collapse = ". ")`)
 
 # kamala analysis
 kamala_all_tweet <- read_csv("data supervised_L/kamala_after.csv")
 #get only the tweets after the election
 kamala_after_analysis <- kamala_all_tweet %>% 
   mutate(date = date(created_at)) %>% 
-  filter(date >= "2020-11-03")
+  filter(date >= "2020-11-03",
+        display_text_width > 100)
 #get the tweet before
 kamala_before_analysis <- kamala_all_tweet %>% 
   mutate(date = date(created_at)) %>% 
-  filter(date < "2020-11-03")
+  filter(date < "2020-11-03",
+        display_text_width > 100)
 #add variable before or after
 kamala_after_analysis <-kamala_after_analysis %>% 
   mutate(when = "after")
@@ -119,27 +130,29 @@ kamala_before_analysis <-kamala_before_analysis %>%
 kamala_after_analysis <- kamala_after_analysis %>% 
   select(text,screen_name, when) %>% 
   group_by(screen_name, when) %>% 
-  summarise(paste(kamala_after_analysis$text, collapse = ' ')) 
+  summarise(paste(kamala_after_analysis$text, collapse = '. ')) 
 
-kamala_after_analysis <- rename(kamala_after_analysis, text = `paste(kamala_after_analysis$text, collapse = " ")`)
+kamala_after_analysis <- rename(kamala_after_analysis, text = `paste(kamala_after_analysis$text, collapse = ". ")`)
   
 kamala_before_analysis <- kamala_before_analysis %>% 
   select(text,screen_name, when) %>% 
   group_by(screen_name, when) %>% 
-  summarise(paste(kamala_before_analysis$text, collapse = ' ')) 
+  summarise(paste(kamala_before_analysis$text, collapse = '. ')) 
 
-kamala_before_analysis <- rename(kamala_before_analysis, text = `paste(kamala_before_analysis$text, collapse = " ")`)
+kamala_before_analysis <- rename(kamala_before_analysis, text = `paste(kamala_before_analysis$text, collapse = ". ")`)
 
 # obama analysis
 obama_all_tweet <- read_csv("data supervised_L/obama_after.csv")
 #get only the tweets after the election
 obama_after_analysis <- obama_all_tweet %>% 
   mutate(date = date(created_at)) %>% 
-  filter(date >= "2020-11-03")
+  filter(date >= "2020-11-03",
+        display_text_width > 100)
 #get the tweet before
 obama_before_analysis <- obama_all_tweet %>% 
   mutate(date = date(created_at)) %>% 
-  filter(date < "2020-11-03")
+  filter(date < "2020-11-03",
+        display_text_width > 100)
 #add variable before or after
 obama_after_analysis <-obama_after_analysis %>% 
   mutate(when = "after")
@@ -150,16 +163,16 @@ obama_before_analysis <-obama_before_analysis %>%
 obama_after_analysis <- obama_after_analysis %>% 
   select(text,screen_name, when) %>% 
   group_by(screen_name, when) %>% 
-  summarise(paste(obama_after_analysis$text, collapse = ' ')) 
+  summarise(paste(obama_after_analysis$text, collapse = '. ')) 
 
-obama_after_analysis <- rename(obama_after_analysis, text = `paste(obama_after_analysis$text, collapse = " ")`)
+obama_after_analysis <- rename(obama_after_analysis, text = `paste(obama_after_analysis$text, collapse = ". ")`)
   
 obama_before_analysis <- obama_before_analysis %>% 
   select(text,screen_name, when) %>% 
   group_by(screen_name, when) %>% 
-  summarise(paste(obama_before_analysis$text, collapse = ' ')) 
+  summarise(paste(obama_before_analysis$text, collapse = '. ')) 
 
-obama_before_analysis <- rename(obama_before_analysis, text = `paste(obama_before_analysis$text, collapse = " ")`)
+obama_before_analysis <- rename(obama_before_analysis, text = `paste(obama_before_analysis$text, collapse = ". ")`)
 
 
 # AOC analysis
@@ -167,11 +180,13 @@ aoc_all_tweet <- read_csv("data supervised_L/aoc_after.csv")
 #get only the tweets after the election
 aoc_after_analysis <- aoc_all_tweet %>% 
   mutate(date = date(created_at)) %>% 
-  filter(date >= "2020-11-03")
+  filter(date >= "2020-11-03",
+        display_text_width > 100)
 #get the tweet before
 aoc_before_analysis <- aoc_all_tweet %>% 
   mutate(date = date(created_at)) %>% 
-  filter(date < "2020-11-03")
+  filter(date < "2020-11-03",
+        display_text_width > 100)
 #add variable before or after
 aoc_after_analysis <-aoc_after_analysis %>% 
   mutate(when = "after")
@@ -182,16 +197,16 @@ aoc_before_analysis <-aoc_before_analysis %>%
 aoc_after_analysis <- aoc_after_analysis %>% 
   select(text,screen_name, when) %>% 
   group_by(screen_name, when) %>% 
-  summarise(paste(aoc_after_analysis$text, collapse = ' ')) 
+  summarise(paste(aoc_after_analysis$text, collapse = '. ')) 
 
-aoc_after_analysis <- rename(aoc_after_analysis, text = `paste(aoc_after_analysis$text, collapse = " ")`)
+aoc_after_analysis <- rename(aoc_after_analysis, text = `paste(aoc_after_analysis$text, collapse = ". ")`)
   
 aoc_before_analysis <- aoc_before_analysis %>% 
   select(text,screen_name, when) %>% 
   group_by(screen_name, when) %>% 
-  summarise(paste(aoc_before_analysis$text, collapse = ' ')) 
+  summarise(paste(aoc_before_analysis$text, collapse = '. ')) 
 
-aoc_before_analysis <- rename(aoc_before_analysis, text = `paste(aoc_before_analysis$text, collapse = " ")`)
+aoc_before_analysis <- rename(aoc_before_analysis, text = `paste(aoc_before_analysis$text, collapse = ". ")`)
 
 corpus <- rbind(Trump_after_analysis, Trump_before_analysis, vp_after_analysis, vp_before_analysis,
                 biden_after_analysis, biden_before_analysis, kamala_after_analysis, kamala_before_analysis,

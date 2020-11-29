@@ -147,6 +147,37 @@ VP_raw %>%
 ```
 
 
+```{r}
+f <- file.path(here("data supervised_L/"), c("biden_after.csv","kamala_after.csv", "trump_after.csv", "vp_after.csv", "obama_after.csv", "aoc_after.csv"))
+d <- lapply(f, read.csv)
+str(d, give.attr = FALSE)
+
+d <- Map(cbind, d, name = c("Biden", "Kamala", "Trump", "VP", "obama", "aoc"))
+
+tweet_all <- rbind(d[[1]], d[[2]], d[[3]], d[[4]],d[[5]],d[[6]])
+
+
+# 2weeks befores and 2 weeks after
+tweet_all %>%  select(-name) %>% 
+  mutate(date_created = date(created_at)) %>% 
+  filter(date_created >= "2020-10-20" & date_created <= "2020-11-17") %>%
+  select(screen_name, favorite_count, retweet_count, display_text_width) %>% 
+  group_by(screen_name) %>% 
+  summarise(mean_favorite = mean(favorite_count),
+            mean_retweet = mean(retweet_count),
+            mean_text_width = mean(display_text_width)) %>% 
+  arrange(desc(mean_favorite)) %>% 
+  mutate(mean_retweet = round(mean_retweet, 0),
+         mean_favorite = round(mean_favorite, 0),
+         mean_text_width = round(mean_text_width, 0)) %>% 
+ kable(caption = "Statistics for @VP", col.names = c("name","avg_like", "avg_retweet", "avg_tweet_length")) %>%
+  kable_styling(
+    bootstrap_options = "striped",
+    full_width = F,
+    position = "left"
+  )
+  
+```
 
 
 

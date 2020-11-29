@@ -45,10 +45,18 @@ trump.tok %>% top_n(15) %>%
       position = "left"
     )
   
-  
+  library(scales)
 tweet_all %>%  select(-name) %>% 
   mutate(date_created = date(created_at)) %>% 
   filter(date_created >= "2020-10-20" & date_created <= "2020-11-17") %>%
   group_by(date_created, screen_name) %>% 
   count() %>% 
+  ggplot(aes( x = date_created, y = n,
+              colour = screen_name ))+
+  geom_line()+
+  scale_y_continuous(breaks = seq(0 , 70, by = 5))+
+  theme(axis.text.x = element_text(angle=45))+
+  scale_x_date(breaks = date_breaks("days"),
+               labels = date_format("%m/%d"))+
+  ggtitle("Number of daily tweet per candidate") + ylab("nb tweets")
   

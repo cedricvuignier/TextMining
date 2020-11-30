@@ -34,6 +34,12 @@ library(tidyverse)
 library(tidytext)
 library(textdata)
 library(wordcloud)
+library(quanteda.textmodels)
+library(caret)
+library(ranger)
+library(lexicon)
+library(qdapRegex)
+library(text2vec)
 
 ```
 

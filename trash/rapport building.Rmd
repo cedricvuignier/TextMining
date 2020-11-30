@@ -1,0 +1,23 @@
+```{r}
+tweet.cp <- corpus(corpus$text)
+
+tweet.tk <- tokens(tweet.cp, remove_numbers=TRUE, remove_punct=TRUE, remove_symbols=TRUE, remove_separators=TRUE)
+## crude.tk # un-comment this line
+tweet.tk <- tweet.tk %>% tokens_tolower() %>% tokens_remove(stopwords("english")) %>% tokens_remove("reuter")
+## crude.tk # un-comment this line
+tweet.dfm <- dfm(tweet.tk)
+
+tweet.tfidf <- dfm_tfidf(tweet.dfm)
+
+tweet.freq <- textstat_frequency(tweet.dfm)
+## Illustration of the Zipf's law
+plot(frequency~rank, data=tweet.freq, pch=20)
+text(frequency~rank, data=tweet.freq[1:4,], label=feature, pos=4)
+#log transformation
+plot(log(frequency)~log(rank), data=tweet.freq, pch=20)
+text(log(frequency)~log(rank), data=tweet.freq[1:10,], label=feature, pos=10)
+
+
+
+```
+

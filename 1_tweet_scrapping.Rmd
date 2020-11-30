@@ -6,19 +6,20 @@ We collect the 3000 last tweets from TRUMP, JOE BIDEN, KAMALA HARRIS, MIKE PENCE
 Twitter sets a limit of 3200 tweets per request. So we have to do the same operation for each account (@).
 ```{r message=FALSE, warning=FALSE, eval=FALSE}
 #split the scrapping into two part to avoid the limit 
-#########REPUCLICAN#############################
-#we see that MIKE PENCE the vice president of donald trump doesn't tweet. He only retweet. so we scrap manually the Retweet for him
-tweet_trump <- get_timelines("realDonaldTrump", n = 3000, 
-            include_rts = FALSE)
+
+#REPUCLICAN
+tweet_trump <- get_timelines("realDonaldTrump", n = 3000, include_rts = FALSE)
+
+#vice president tweet
+tweet_VP <- get_timelines("VP", n = 3000, include_rts = TRUE)
+
 
 #get the hastag trump
 tweet_trump_hashtag <- search_tweets(
   "#Trump", n = 3000, include_rts = FALSE
 )
 
-#vice president tweet
-tweet_VP <- get_timelines("VP", n = 3000, 
-            include_rts = TRUE)
+
 
 #########DEMOCRATE#############################
 

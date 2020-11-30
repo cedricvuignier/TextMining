@@ -1,639 +1,93 @@
 
-# Supervised learning
-
-In this part, we will use the whole set of data which includes the tweets before and after the election. We would like to predict the person who wrote those tweets and also his political party. 
-
-At the beginning, we add the variable corresponding to the political party of the tweet's writer. We also create a new varible with the abbreviation of the name of the tweet's writers. Then, we create a corpus and clean it. We use the lemmatization method in the tokenisation process. 
-
 ```{r setup, include=FALSE}
+#ici les données sont avant et après, il y a toujours moyen de les filtrer selon les besoin
 f <- file.path(here("data supervised_L/"), c("biden_after.csv","kamala_after.csv", "trump_after.csv", "vp_after.csv", "obama_after.csv", "aoc_after.csv"))
 d <- lapply(f, read.csv)
+str(d, give.attr = FALSE)
 
-# d <- Map(cbind, d, name_abb = c("Biden", "Kamala", "Trump", "VP", "obama", "aoc"))
+d <- Map(cbind, d, name = c("Biden", "Kamala", "Trump", "VP", "obama", "aoc"))
 
 tweet_all <- rbind(d[[1]], d[[2]], d[[3]], d[[4]],d[[5]],d[[6]])
 
-tweet_all <- tweet_all %>% select(screen_name, created_at, text, source, display_text_width, favorite_count, retweet_count)
-
-#add the political party of the author of a tweet to the dataset
-tweet_all <- tweet_all %>% mutate(party = case_when(grepl(c("realDonaldTrump|VP"), screen_name) ~ "republican", 
-                                    grepl(c("BarackObama|JoeBiden|KamalaHarris|AOC"), screen_name) ~ "democrate"))
-
-tweet_all$text <- as.character(tweet_all$text) #transform text column into character
 
 tweets.corpus <- corpus(tweet_all)
 
-tweets.corpus <- gsub('\\b\\w{1,2}\\b','', tweets.corpus) #remove tokens whose length is smaller than 3
 
-# library(lexicon)
-# library(qdapRegex)
+tweets.tokens <- tokens(tweets.corpus, 
+                        remove_punct = TRUE, 
+                        remove_symbols = TRUE, 
+                        remove_url = TRUE,
+                        what="word1")
 
-#tokenisation
-tweets.tokens <- tokens(
-  tweets.corpus,
-  remove_punct = TRUE,
-  remove_symbols = TRUE,
-  remove_url = TRUE,
-  what = "word1")
+tweets.tokens <- tokens_tolower(tweets.tokens) %>% tokens_wordstem() %>%
+  tokens_remove(stopwords("english")) %>% 
+  tokens_subset(ntoken(tweets.tokens) > 2) 
 
- tweets.tokens <- tweets.tokens %>% tokens_replace(pattern = hash_lemmas$token, replacement =
-                                           hash_lemmas$lemma)  #use the lemmatization 
+########## à partir de la ça doit être assez similaire aux exos du prof (supervised et unsupervised)
+#j'ai pensé qu'on pourrait créer une variable y (partie politique -> prédire le partie)
+#on peut aussi bien évidemmetn prédire celui qui à écrit le tweet ou d'autre variable 
+#on peut aussi essayer de mieux nettoyer le mots inutils voir si ça améliore la prédiciton 
 
- 
-tweets.tokens <- tweets.tokens %>% tokens_tolower() %>% tokens_remove(stopwords("english")) %>% tokens_remove(c("https", "t.co", "http", "amp"))
- 
-tweets.tokens <- tweets.tokens %>%  tokens_remove(pattern = "(?<=\\d{1,9})\\w+", valuetype = "regex" ) #remove tokens containing numbers
-
-tweets.tokens <- tweets.tokens %>% tokens_subset(ntoken(tweets.tokens) > 2) #remove sentences with less than 3 tokens
-```
-
-## Word embedding
-
-We create a words vector representation using the GloVe method. To do it, we first need to compute the co-occurence matrix. 
-
-```{r}
-tweets_coo <- fcm(tweets.tokens, context = "window", window = 5, tri = FALSE)
-
-library(text2vec)
-p <- 2 #word embedding dimension
-tweets.glove <- GlobalVectors$new(rank = p, x_max = 10) #GloVe method
-tweets.we <- tweets.glove$fit_transform(tweets_coo) #central vectors
-word_vectors_context <- tweets.glove$components #context vectors
-twitter.glove <- tweets.we + t(word_vectors_context) #match central vectors and context vectors
-
-nwords <- apply(dfm(tweets.tokens), 2, sum) #number of times each term is used (frequency)
-index <- order(nwords, decreasing = TRUE)[1:100] #100 largest number of words
-plot(tweets.we[index,], type ="n", xlab="Dim1", ylab="Dim2", main = "The 100 most frequent words") #plot the 100 most frequent words in the corpus
-text(x=tweets.we[index,], labels = rownames(tweets.we[index,]))
-```
-
-
-Because the cluster is completely illegible, we display the 10 most frequent words in 5 clusters. Clusters are computed using the RelaxedWordMoversDistance (RWMD)
-
-```{r}
-tweets.dtm <- dfm(tweets.tokens)
-tweets.rwmd <- RelaxedWordMoversDistance$new(tweets.dtm, tweets.we)
-
-tweets.rwmd.dist <- tweets.rwmd$dist2(tweets.dtm)
-tweets.hc <- hclust(as.dist(tweets.rwmd.dist))   
-
-memb <- cutree(tweets.hc, k = 5) #to have a significant clustering, we reduce their numbers to 5 
-
-tweets.dtm[memb == 1,]
-data.frame(Clust.1 = names(sort(apply(tweets.dtm[memb == 1,], 2, sum), decreasing = TRUE)[1:10]),
-           Clust.2 = names(sort(apply(tweets.dtm[memb == 2,], 2, sum), decreasing = TRUE)[1:10]),
-           Clust.3 = names(sort(apply(tweets.dtm[memb == 3,], 2, sum), decreasing = TRUE)[1:10]),
-           Clust.4 = names(sort(apply(tweets.dtm[memb == 4,], 2, sum), decreasing = TRUE)[1:10]),
-           Clust.5 = names(sort(apply(tweets.dtm[memb == 5,], 2, sum), decreasing = TRUE)[1:10])) 
-```
-
-Below, we repeat the same process but with 25 word embedding dimensions. To illustrate it, we display the 10 most frequent words in 5 clusters. 
-
-
-```{r}
-p <- 25 #word embedding dimension
-tweets.glove <- GlobalVectors$new(rank = p, x_max = 10) #GloVe method
-tweets.we <- tweets.glove$fit_transform(tweets_coo) #central vectors
-word_vectors_context <- tweets.glove$components #context vectors
-twitter.glove <- tweets.we + t(word_vectors_context) #match central vectors and context vectors
-
-nwords <- apply(dfm(tweets.tokens), 2, sum) #number of times each term is used (frequency)
-index <- order(nwords, decreasing = TRUE)[1:100] #100 largest number of words
-
-ndoc <- length(tweets.tokens) #number of documents in the corpus 
-centers <- matrix(nrow = ndoc, ncol = p) #create a matrix for the centroids
-for(i in 1:ndoc){ #compute the centroids 
-  words_in_i <- twitter.glove[tweets.tokens[[i]],, drop = FALSE]
-  centers[i,] <- apply(words_in_i, 2, mean)
-}
-
-row.names(centers) <- names(tweets.tokens) #name the columns of the centroid matrix
-
-tweets.dtm <- dfm(tweets.tokens) #TF
-tweets.rwmd <- RelaxedWordMoversDistance$new(tweets.dtm, tweets.we)
-
-tweets.rwmd.dist <- tweets.rwmd$dist2(tweets.dtm)
-tweets.hc <- hclust(as.dist(tweets.rwmd.dist))
-
-memb <- cutree(tweets.hc, k = 5) #to have a significant clustering, we reduce their numbers to 5 
-
-tweets.dtm[memb == 1,]
-data.frame(Clust.1 = names(sort(apply(tweets.dtm[memb == 1,], 2, sum), decreasing = TRUE)[1:10]),
-           Clust.2 = names(sort(apply(tweets.dtm[memb == 2,], 2, sum), decreasing = TRUE)[1:10]),
-           Clust.3 = names(sort(apply(tweets.dtm[memb == 3,], 2, sum), decreasing = TRUE)[1:10]),
-           Clust.4 = names(sort(apply(tweets.dtm[memb == 4,], 2, sum), decreasing = TRUE)[1:10]),
-           Clust.5 = names(sort(apply(tweets.dtm[memb == 5,], 2, sum), decreasing = TRUE)[1:10]))
-```
-As we can see, the clustering seems more significant. For example, cluster 5 links gathers words that seem to be of Spanish origin, cluster 3 links words related to joy (birthday, happy).
-
-## Author of the tweet
-
-We will build different models to predict the author of a tweet (y = screen_name) and compare them. 
-
-1. TF + LSA 
-
-```{r setup, include=FALSE}
-y <- factor(docvars(tweets.tokens, "screen_name")) #who wrote the tweet is the variable to predict
+names(tweet_all) #les diff variable du corpus
+y <- factor(docvars(tweets.tokens, "screen_name")) #ici y = celui qui à écrit le tweet 
 
 tweets.dfm <- dfm(tweets.tokens)
-# dim(tweets.dfm)
+dim(tweets.dfm)
 
-# library(quanteda.textmodels)
-# library(caret)
-# library(ranger)
+library(quanteda.textmodels)
+#essayer différente dim
 
-set.seed(2020)
-index.tr <- sample(size=round(0.8*length(y)), x=c(1:length(y)), replace=FALSE) #we split the data into a training set and a test set
-# df.tr <- df[index.tr,]
-# df.te <- df[-index.tr,]
+tweets.lsa <- textmodel_lsa(tweets.dfm, nd=25)
+head(tweets.lsa$docs)
 
-nd.vec <- c(2,5,25,50,100, 500, 1000) #because our matrix is well too big, we apply a reduction dimension technique such as the LSA one
-
-acc.vec <- numeric(length(nd.vec))
-for (j in 1:length(nd.vec)){
-  tweets.lsa <- textmodel_lsa(tweets.dfm, nd=nd.vec[j])
-  df <- data.frame(Class=y, X=tweets.lsa$docs)
-  df <- cbind(df, 
-            logretweet=log10(docvars(tweets.tokens, c("retweet_count"))),
-            length = log(sapply(tweets.tokens, length)))
-  df.tr <- df[index.tr,]
-  df.te <- df[-index.tr,]
-  set.seed(2020)
-  tweets.fit <- ranger(Class ~ ., #use a random forest
-                       data = df.tr)
-  pred.te <- predict(tweets.fit, df.te)
-  acc.vec[j] <- confusionMatrix(data=pred.te$predictions, reference = df.te$Class)$overall[1]
-}
-
-
-acc.vec
-
-plot(acc.vec ~ nd.vec, type='b', main = "LSA on a DTM matrix composed by the word frequency", ylab = "Accuracy", xlab = "Number of LSA dimensions") #500 dimensions has the best accuracy
-```
-
-We found an accuracy of 0.6861423. This score is related to a LSA of 500 dimensions. 
-
-
-2. TF-IDF + LSA
-
-```{r}
-tweets.tfidf <- dfm_tfidf(tweets.dfm)
-
-nd.vec <- c(2,5,25,50,100, 500, 1000) #because our matrix is well too big, we apply a reduction dimension technique such as the LSA one
-
-acc.vec <- numeric(length(nd.vec))
-for (j in 1:length(nd.vec)){
-  tweets.lsa <- textmodel_lsa(tweets.tfidf, nd=nd.vec[j])
-  df <- data.frame(Class=y, X=tweets.lsa$docs)
-   df <- cbind(df, 
-            logretweet=log10(docvars(tweets.tokens, c("retweet_count"))),
-            length = log(sapply(tweets.tokens, length)))
-  df.tr <- df[index.tr,]
-  df.te <- df[-index.tr,]
-  set.seed(2020)
-  tweets.fit <- ranger(Class ~ ., #use a random forest
-                       data = df.tr)
-  pred.te <- predict(tweets.fit, df.te)
-  acc.vec[j] <- confusionMatrix(data=pred.te$predictions, reference = df.te$Class)$overall[1]
-}
-
-acc.vec
-plot(acc.vec ~ nd.vec, type='b', main = "LSA with TF-IDF", ylab = "Accuracy", xlab = "Number of LSA dimensions") #50 dimensions has the best accuracy
-
-```
-As we can see, accuracy is better when using TF-IDF with LSA of 50 dimensions (0.7382022). 
-
-3. Word embedding + centroids
-
-We compute the centroids in order to transform the word embedding to a document embedding. 
-
-We start with the two dimensions word embedding from the previous part. 
-
-```{r}
-p <- 2 #word embedding dimension
-tweets.glove <- GlobalVectors$new(rank = p, x_max = 10) #GloVe method
-tweets.we <- tweets.glove$fit_transform(tweets_coo) #central vectors
-word_vectors_context <- tweets.glove$components #context vectors
-twitter.glove <- tweets.we + t(word_vectors_context) #match central vectors and context vectors
-
-ndoc <- length(tweets.tokens) #number of documents in the corpus 
-centers <- matrix(nrow = ndoc, ncol = p) #create a matrix for the centroids
-for(i in 1:ndoc){ #compute the centroids 
-  words_in_i <- twitter.glove[tweets.tokens[[i]],, drop = FALSE]
-  centers[i,] <- apply(words_in_i, 2, mean)
-}
-
-row.names(centers) <- names(tweets.tokens) #name the columns of the centroid matrix
-
-plot(x = centers, type ="n", xlab="Dim1", ylab="Dim2", main = "Centroids") #plot the centroids
-text(centers, labels = rownames(centers))
-
-```
-
-```{r}
-df <- data.frame(Class=y, X=centers)
+df <- data.frame(Class=y, X=tweets.lsa$docs)
+index.tr <- sample(size=round(0.8*length(y)), x=c(1:length(y)), replace=FALSE)
 df.tr <- df[index.tr,]
 df.te <- df[-index.tr,]
-set.seed(2020)
-
-
-tweets.fit <- ranger(Class ~ .,
+library(ranger)
+tweets.fit <- ranger(Class ~ ., 
                      data = df.tr)
-
 pred.te <- predict(tweets.fit, df.te)
+
+library(caret)
 confusionMatrix(data=pred.te$predictions, reference = df.te$Class)
 ```
-With an accuracy of 0.2764, the cendroids coming from the word embedding part (two dimensions word embedding) are very bad for the prediction model. We could try to use more word embedding dmensions in order to see if we get better results. We set the dimensions of word embedding to 25. 
-
-```{r}
-tweets_coo <- fcm(tweets.tokens, context = "window", window = 5, tri = FALSE)
-p <- 25 #word embedding dimension
-tweets.glove <- GlobalVectors$new(rank = p, x_max = 10) #GloVe method
-tweets.we <- tweets.glove$fit_transform(tweets_coo) #central vectors
-word_vectors_context <- tweets.glove$components #context vectors
-twitter.glove <- tweets.we + t(word_vectors_context) #match central vectors and context vectors
-
-ndoc <- length(tweets.tokens) #number of documents in the corpus 
-centers <- matrix(nrow = ndoc, ncol = p) #create a matrix for the centroids
-for(i in 1:ndoc){ #compute the centroids 
-  words_in_i <- twitter.glove[tweets.tokens[[i]],, drop = FALSE]
-  centers[i,] <- apply(words_in_i, 2, mean)
-}
-
-row.names(centers) <- names(tweets.tokens) #name the columns of the centroid matrix
-
-df <- data.frame(Class=y, X=centers)
-df.tr <- df[index.tr,]
-df.te <- df[-index.tr,]
-
-set.seed(2020)
-tweets.fit <- ranger(Class ~ ., 
-                     data = df.tr)
-
-pred.te <- predict(tweets.fit, df.te)
-cm1 <- confusionMatrix(data=pred.te$predictions, reference = df.te$Class)
-
-draw_confusion_matrix <- function(cm) {
-
-  layout(matrix(c(1,1,2)))
-  par(mar=c(2,2,2,2))
-  plot(c(100, 345), c(300, 450), type = "n", xlab="", ylab="", xaxt='n', yaxt='n')
-  title('CONFUSION MATRIX', cex.main=2)
-
-  # create the matrix 
-  rect(150, 430, 240, 370, col='#3F97D0')
-  text(195, 435, 'Class1', cex=1.2)
-  rect(250, 430, 340, 370, col='#F7AD50')
-  text(295, 435, 'Class2', cex=1.2)
-  text(125, 370, 'Predicted', cex=1.3, srt=90, font=2)
-  text(245, 450, 'Actual', cex=1.3, font=2)
-  rect(150, 305, 240, 365, col='#F7AD50')
-  rect(250, 305, 340, 365, col='#3F97D0')
-  text(140, 400, 'Class1', cex=1.2, srt=90)
-  text(140, 335, 'Class2', cex=1.2, srt=90)
-
-  # add in the cm results 
-  res <- as.numeric(cm$table)
-  text(195, 400, res[1], cex=1.6, font=2, col='white')
-  text(195, 335, res[2], cex=1.6, font=2, col='white')
-  text(295, 400, res[3], cex=1.6, font=2, col='white')
-  text(295, 335, res[4], cex=1.6, font=2, col='white')
-
-  # # add in the specifics 
-  plot(c(100, 0), c(100, 0), type = "n", xlab="", ylab="", main = "DETAILS", xaxt='n', yaxt='n')
-  # text(10, 85, names(cm$byClass[1]), cex=1.2, font=2)
-  # text(10, 70, round(as.numeric(cm$byClass[1]), 3), cex=1.2)
-  # text(30, 85, names(cm$byClass[2]), cex=1.2, font=2)
-  # text(30, 70, round(as.numeric(cm$byClass[2]), 3), cex=1.2)
-  # text(50, 85, names(cm$byClass[5]), cex=1.2, font=2)
-  # text(50, 70, round(as.numeric(cm$byClass[5]), 3), cex=1.2)
-  # text(70, 85, names(cm$byClass[6]), cex=1.2, font=2)
-  # text(70, 70, round(as.numeric(cm$byClass[6]), 3), cex=1.2)
-  # text(90, 85, names(cm$byClass[7]), cex=1.2, font=2)
-  # text(90, 70, round(as.numeric(cm$byClass[7]), 3), cex=1.2)
-
-  # add in the accuracy information 
-  text(30, 60, names(cm$overall[1]), cex=1.5, font=2)
-  text(30, 35, round(as.numeric(cm$overall[1]), 3), cex=1.4)
-  text(70, 60, names(cm$overall[2]), cex=1.5, font=2)
-  text(70, 35, round(as.numeric(cm$overall[2]), 3), cex=1.4)
-}  
-
-draw_confusion_matrix(cm1)
-
-```
-With 25 dimensions, we get an accuracy of 0.621 which is better than when using only two dimensions in word embedding. We will keep using 25 dimensions in order to limit the computational time for the following.
-
-TF-IDF is doing better. Now, we will try to combine the centroids with TF-IDF in order to see if we can improve accuracy. 
-
-4. Combining centroids with TF-IDF + LSA 
 
 
-```{r}
-tweets.tfidf <- dfm_tfidf(tweets.dfm) #TF-IDF
-tweets.lsa <- textmodel_lsa(tweets.tfidf, nd=50) 
-df <- data.frame(Class=y, X=tweets.lsa$docs)
-df <- cbind(df, 
-            logretweet=log10(docvars(tweets.tokens, c("retweet_count"))),
-            length = log(sapply(tweets.tokens, length)))
-df <- cbind(df, Cent=centers) #add the centroid from word embedding part
-df.tr <- df[index.tr,]
-df.te <- df[-index.tr,]
-set.seed(2020)
-tweets.fit <- ranger(Class ~ ., 
-                     data = df.tr, 
-                     importance = "impurity")
-pred.te <- predict(tweets.fit, df.te)
-cm2 <- confusionMatrix(data=pred.te$predictions, reference = df.te$Class)
-draw_confusion_matrix(cm2)
-
-```
-The combination of features (TF-IDF + LSA + Centroids) (0.7367) does not surpass the prediction made with the TF-IDF and LSA (0.7382022). 
 
 
-For the following, we will keep this last combination of features (TF-IDF + LSA + Centroids) to compare the results with different models.
+
+# Analysis GAETAN
+```{r eval=FALSE, include=FALSE}
 
 
-5. Support vector machine (SVM)
+f <- file.path(here("data_before/"), c("BIDEN_all_tweet.csv","KAMALA_all_tweet.csv", "TRUMP_all_tweet.csv", "VP_all_tweet.csv"))
+d <- lapply(f, read.csv)
+str(d, give.attr = FALSE)
 
-```{r}
-is.na(df) <- sapply(df, is.infinite) #transform infinite values into NA 
-df<- drop_na(df) #remove na values
-df.tr <- df[index.tr,]
-df.te <- df[-index.tr,]
+d <- Map(cbind, d, name = c("Biden", "Kamala", "Trump", "VP"))
 
-train_control <- trainControl(method = "cv", number = 5)
-metric <- "Accuracy"
-
-set.seed(2020)
-fit_svm <- train(
-  form = Class ~ .,
-  data = df.tr,
-  trControl = train_control,
-  tuneLength = 5,
-  method = "svmRadial",
-  preProcess = c("center","scale"),
-  metric = metric,
-  na.action=na.exclude
-)
-
-pred.te <- predict(tweets.fit, df.te)
-cm3 <-  confusionMatrix(data=pred.te$predictions, reference = df.te$Class)
-draw_confusion_matrix(cm3)
-```
-The SVM model, with an accuracy of 0.8472, is doing a great job in comparison to the random forest model.
-
-6. Neural network (NN)
-
-In order to avoid overfitting, we will use a weight decay to penalise the largest weights. We will also tune the size of the neural networks to find the opimal one.
-
-We will use a five cross-validation to subset the training set (into a validation set) in order to asses how well the model will generalize to the test set.
-
-```{r}
-hp_nn <- expand.grid(size = 2:10,
-                     decay = seq(0, 0.5, 0.05))
-
-train_control <- trainControl(method = "cv", number = 5)
-metric <- "Accuracy"
-
-set.seed(2020)
-tweets.fit <- train(
-  form = Class ~ .,
-  data = df.tr,
-  tuneGrid = hp_nn,
-  method = "nnet",
-  trControl = train_control,
-  metric = metric,
-  na.action=na.exclude)
-
-pred.te <- predict(tweets.fit, newdata = df.te)
-cm4 <- confusionMatrix(data=pred.te, reference = df.te$Class)
-draw_confusion_matrix(cm4)
-
-```
-The accuracy of 0.671 is really disappointing. The neural network model should not be used to predict the author of a tweet. 
-
-7. Linear discriminant analysis (LDA)
-
-```{r}
-train_control <- trainControl(method = "cv", number = 5)
-metric <- "Accuracy"
-
-set.seed(2020)
-tweets.fit <- train(
-  form = Class ~ .,
-  data = df.tr,
-  method = "lda",
-  trControl = train_control,
-  metric = metric,
-  na.action=na.exclude)
+test<- rbind(d[[1]], d[[2]], d[[3]], d[[4]])
+test<- tibble(test)
 
 
-pred.te <- predict(tweets.fit, newdata = df.te)
-cm5 <- confusionMatrix(data=pred.te, reference = df.te$Class)
-draw_confusion_matrix(cm5)
-```
+test2 <- as.character(as.vector(test[,1])) 
+tweets.corpus <- corpus(test2)
 
-Just like the neural network model, the LDA is not good enough (0.68). 
+tweets.tokens <- tokens(tweets.corpus, 
+                        remove_punct = TRUE, 
+                        remove_symbols = TRUE, 
+                        remove_url = TRUE,
+                        what="word1") ## option for removing hastags and tags symbols (@, #, etc.)
 
-## Political party
+tweets.tokens <- tokens_tolower(tweets.tokens) %>% tokens_wordstem() %>%
+    tokens_remove(stopwords("english")) %>% 
+    tokens_subset(ntoken(tweets.tokens) > 2) # removes tweets with 2 or fewer tokens
 
-Then, we repeat the previous process to predict the political party (y = party).
 
+y <- factor(docvars(tweets.tokens, "handle"))
 
-1. TF + LSA 
-```{r setup, include=FALSE}
-#we add new features for our model
-y <- factor(docvars(tweets.tokens, "party")) #political party is the variable to predict
 tweets.dfm <- dfm(tweets.tokens)
-
-nd.vec <- c(2,5,25,50,100, 500, 1000) #because our matrix is well too big, we apply a reduction dimension technique such as the LSA one
-
-acc.vec <- numeric(length(nd.vec))
-for (j in 1:length(nd.vec)){
-  tweets.lsa <- textmodel_lsa(tweets.dfm, nd=nd.vec[j])
-  df <- data.frame(Class=y, X=tweets.lsa$docs)
-  df <- cbind(df, 
-            logretweet=log10(docvars(tweets.tokens, c("retweet_count"))),
-            length = log(sapply(tweets.tokens, length)))
-  df.tr <- df[index.tr,]
-  df.te <- df[-index.tr,]
-  set.seed(2020)
-  tweets.fit <- ranger(Class ~ ., #use a random forest
-                       data = df.tr)
-  pred.te <- predict(tweets.fit, df.te)
-  acc.vec[j] <- confusionMatrix(data=pred.te$predictions, reference = df.te$Class)$overall[1]
-}
-
-plot(acc.vec ~ nd.vec, type='b',  main = "LSA on a DTM matrix composed by the word frequency", ylab = "Accuracy", xlab = "Number of LSA dimensions") #50 dimensions has the best accuracy
-
-acc.vec
-```
-The best accuracy (0.8576779) is found with a LSA of 50 dimensions. 
-
-
-2. TF-IDF + LSA
-
-```{r}
-tweets.tfidf <- dfm_tfidf(tweets.dfm)
-
-nd.vec <- c(2,5,25,50,100, 500, 1000) #because our matrix is well too big, we apply a reduction dimension technique such as the LSA one
-
-acc.vec <- numeric(length(nd.vec))
-for (j in 1:length(nd.vec)){
-  tweets.lsa <- textmodel_lsa(tweets.tfidf, nd=nd.vec[j])
-  df <- data.frame(Class=y, X=tweets.lsa$docs)
-   df <- cbind(df, 
-            logretweet=log10(docvars(tweets.tokens, c("retweet_count"))),
-            length = log(sapply(tweets.tokens, length)))
-  df.tr <- df[index.tr,]
-  df.te <- df[-index.tr,]
-  set.seed(2020)
-  tweets.fit <- ranger(Class ~ ., #use a random forest
-                       data = df.tr)
-  pred.te <- predict(tweets.fit, df.te)
-  acc.vec[j] <- confusionMatrix(data=pred.te$predictions, reference = df.te$Class)$overall[1]
-}
-
-acc.vec
-plot(acc.vec ~ nd.vec, type='b', main = "LSA with TF-IDF", ylab = "Accuracy", xlab = "Number of LSA dimensions") #50 dimensions has the best accuracy
+dim(tweets.dfm)
 
 ```
-The random forest trained on a TF-IDF with a LSA of 50 dimensions get an accuracy of 0.8928839 which is better than with TF. Therefore, we will continue with the TF-IDF. 
-
-3. Word embedding + centroids
-
-```{r}
-p <- 25 #word embedding dimension
-
-tweets.glove <- GlobalVectors$new(rank = p, x_max = 10) #GloVe method
-tweets.we <- tweets.glove$fit_transform(tweets_coo) #central vectors
-word_vectors_context <- tweets.glove$components #context vectors
-twitter.glove <- tweets.we + t(word_vectors_context) #match central vectors and context vectors
-
-ndoc <- length(tweets.tokens) #number of documents in the corpus 
-centers <- matrix(nrow = ndoc, ncol = p) #create a matrix for the centroids
-for(i in 1:ndoc){ #compute the centroids 
-  words_in_i <- twitter.glove[tweets.tokens[[i]],, drop = FALSE]
-  centers[i,] <- apply(words_in_i, 2, mean)
-}
-
-row.names(centers) <- names(tweets.tokens) #name the columns of the centroid matrix
-
-df <- data.frame(Class=y, X=centers)
-df.tr <- df[index.tr,]
-df.te <- df[-index.tr,]
-set.seed(2020)
-tweets.fit <- ranger(Class ~ ., 
-                     data = df.tr)
-pred.te <- predict(tweets.fit, df.te)
-cm6 <- confusionMatrix(data=pred.te$predictions, reference = df.te$Class)
-draw_confusion_matrix(cm6)
-
-```
-The random forest trained on the centroids do quite a good job (0.848). Therefore, centroids can be combined with other features to improve the model. 
-
-
-4. Combining centroids with TF-IDF + LSA 
-
-```{r}
-tweets.tfidf <- dfm_tfidf(tweets.dfm) #TF-IDF
-tweets.lsa <- textmodel_lsa(tweets.tfidf, nd=50) 
-df <- data.frame(Class=y, X=tweets.lsa$docs)
-df <- cbind(df, 
-            logretweet=log10(docvars(tweets.tokens, c("retweet_count"))),
-            length = log(sapply(tweets.tokens, length)))
-df <- cbind(df, Cent=centers) # add the centroid from word embedding part
-df.tr <- df[index.tr,]
-df.te <- df[-index.tr,]
-set.seed(2020)
-tweets.fit <- ranger(Class ~ ., 
-                     data = df.tr, 
-                     importance = "impurity")
-pred.te <- predict(tweets.fit, df.te)
-cm7 <- confusionMatrix(data=pred.te$predictions, reference = df.te$Class)
-draw_confusion_matrix(cm7)
-
-```
-
-With an accuracy of 0.885, we can conclude that centroids do not improve our TF-IDF + LSA model. 
-
-5. Support vector machine (SVM)
-
-```{r}
-is.na(df) <- sapply(df, is.infinite) #transform infinite values into NA 
-df<- drop_na(df) #remove na values
-df.tr <- df[index.tr,]
-df.te <- df[-index.tr,]
-
-train_control <- trainControl(method = "cv", number = 5)
-metric <- "Accuracy"
-
-set.seed(2020)
-fit_svm <- train(
-  form = Class ~ .,
-  data = df.tr,
-  trControl = train_control,
-  tuneLength = 5,
-  method = "svmRadial",
-  preProcess = c("center","scale"),
-  metric = metric,
-  na.action=na.exclude
-)
-
-pred.te <- predict(tweets.fit, df.te)
-cm8<- confusionMatrix(data=pred.te$predictions, reference = df.te$Class)
-draw_confusion_matrix(cm8)
-```
-
-SVM is doing a great job with an accuracy of 0.964 In addition, there is a high specificity and a high sensitivity which are quite well balanced.
-
-6. Neural network (NN)
-
-```{r}
-hp_nn <- expand.grid(size = 2:10,
-                     decay = seq(0, 0.5, 0.05))
-
-train_control <- trainControl(method = "cv", number = 5)
-metric <- "Accuracy"
-
-set.seed(2020)
-tweets.fit <- train(
-  form = Class ~ .,
-  data = df.tr,
-  tuneGrid = hp_nn,
-  method = "nnet",
-  trControl = train_control,
-  metric = metric,
-  na.action=na.exclude)
-
-pred.te <- predict(tweets.fit, newdata = df.te)
-cm9 <- confusionMatrix(data=pred.te, reference = df.te$Class)
-draw_confusion_matrix(cm9)
-```
-
-Accuracy = 0.893
-
-7. Linear discriminant analysis (LDA)
-
-```{r}
-train_control <- trainControl(method = "cv", number = 5)
-metric <- "Accuracy"
-
-set.seed(2020)
-tweets.fit <- train(
-  form = Class ~ .,
-  data = df.tr,
-  method = "lda",
-  trControl = train_control,
-  metric = metric,
-  na.action=na.exclude)
-
-
-pred.te <- predict(tweets.fit, newdata = df.te)
-cm10 <- confusionMatrix(data=pred.te, reference = df.te$Class)
-draw_confusion_matrix(cm10)
-```
-
-
-Accuracy = 0.87

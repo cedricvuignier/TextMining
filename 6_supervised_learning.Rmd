@@ -9,13 +9,6 @@ d <- Map(cbind, d, name = c("Biden", "Kamala", "Trump", "VP", "obama", "aoc"))
 
 tweet_all <- rbind(d[[1]], d[[2]], d[[3]], d[[4]],d[[5]],d[[6]])
 
-#j'essaie de rajouter le partie politique des candidats######################
-'%!in%' <- function(x,y)!('%in%'(x,y))
-party <- c("realDonaldTrump", "VP")
-tweet_all$party <- ifelse((tweet_all$screen_name %in% party) , "republican", 
-                         ifelse((tweet_all$screen_name %!in% party) , "democrate"))
-######################################################################
-
 
 tweets.corpus <- corpus(tweet_all)
 

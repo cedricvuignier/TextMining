@@ -124,7 +124,9 @@ text(log(frequency)~log(rank), data=tweet.freq[1:10,], label=feature, pos=4)
 ```
 #lexical diversity
 ```{r}
-tweet.cp <- corpus(corpus$text, corpus$screen_name)
+corpus <- read_csv("data supervised_L/corpus_final_before_after.csv")
+
+tweet.cp <- corpus(corpus$text, corpus$Document)
 tweet.dfm <- dfm(tweet.cp,
                    stem=FALSE,
                    tolower=TRUE,
@@ -139,7 +141,7 @@ tweet.div %>%
 ```
 #MATTR
 ```{r}
-tweet.cp <- corpus(corpus$text, corpus$screen_name)
+tweet.cp <- corpus(corpus$text, corpus$Document)
 tweet.tok <- tokens(tweet.cp,
                     remove_punct=TRUE,
                     remove_number=TRUE,
@@ -154,6 +156,9 @@ tweet.div %>%
 #x-ray plot
 #on peut jouer un moment avec ce code 
 ```{r}
+corpus <- read_csv("data supervised_L/corpus_final.csv")
+tweet.cp <- corpus(corpus$text, corpus$screen_name)
+
 head(kwic(tweet.cp, pattern = "president")) # check the result
 textplot_xray(kwic(tweet.cp, pattern = "trump"),
               kwic(tweet.cp, pattern = "biden"))
@@ -241,6 +246,20 @@ tweet.key2 <- tokens(corpus_subset(corpus_key_party, screen_name %in% c("KamalaH
   tokens_replace(pattern=hash_lemmas$token, replacement = hash_lemmas$lemma) %>%
   tokens_remove(pattern = c("s", "amp", "de","la", "en", "t", "https", stopwords("english")))
 tweet.key2 %>% dfm(groups="screen_name") %>% textstat_keyness(target="KamalaHarris") %>% textplot_keyness()
+
+#create the variable "after"
+corpus <- read_csv("data supervised_L/corpus_final_before_after.csv")
+corpus_key_party <- corpus(corpus)
+
+tweet.key3 <- tokens(corpus_subset(corpus_key_party, when %in% c("before", "after")),
+                      remove_punct = TRUE,
+                      remove_symbols = TRUE,
+                      remove_numbers = TRUE) %>%
+  tokens_replace(pattern=hash_lemmas$token, replacement = hash_lemmas$lemma) %>%
+  tokens_remove(pattern = c("s", "amp", "de","la", "en", "t", "https", "http", "et", "co", stopwords("english")))
+tweet.key3 %>% dfm(groups="when") %>% textstat_keyness(target="before") %>% textplot_keyness(n = 15, 
+                                                                                                          color = c("red", "blue"), labelcolor = "black", 
+                                                                                                          labelsize = 4, margin = 0.2)
 
 
 ```

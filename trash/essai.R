@@ -59,4 +59,72 @@ tweet_all %>%  select(-name) %>%
   scale_x_date(breaks = date_breaks("days"),
                labels = date_format("%m/%d"))+
   ggtitle("Number of daily tweet per candidate") + ylab("nb tweets")
+
+
+tweet.div %>% 
+  ggplot(aes(x=reorder(document, I), y=I))+geom_point()+coord_flip()+
+  xlab("Text") + ylab("Yule's index")+
+  ggtitle("Yule's index for each document of the corpus") + xlab("corpus Doc")
   
+
+
+ # check the result
+textplot_xray(kwic(tweet.cp, pattern = "trump"),
+              kwic(tweet.cp, pattern = "biden"))
+
+textplot_xray(kwic(tweet.cp, pattern = "covid"),
+              kwic(tweet.cp, pattern = "health"))
+
+textplot_xray(kwic(tweet.cp, pattern = "fake"),
+              kwic(tweet.cp, pattern = "fraud"))
+#########keyness
+tweet.key <- tokens(corpus_subset(corpus_key, screen_name %in% c("realDonaldTrump", "JoeBiden")),
+                    remove_punct = TRUE,
+                    remove_symbols = TRUE,
+                    remove_numbers = TRUE) %>%
+  tokens_replace(pattern=hash_lemmas$token, replacement = hash_lemmas$lemma) %>%
+  tokens_remove(pattern = c("s", "amp", "de","la", "en", "t","re","gsgsgh", "gsfsghkmdm", stopwords("english")))
+
+tweet.key %>% dfm(groups="screen_name") %>% textstat_keyness(target="realDonaldTrump") %>% textplot_keyness(n = 15, 
+                                                                                                            color = c("red", "blue"), labelcolor = "black", 
+                                                                                                            labelsize = 4, margin = 0.2)
+
+#create the variable "party"
+party <- c("republican", "republican", "democrate", "democrate" , "democrate", "democrate")
+corpus_key_party <- cbind(corpus,party)
+corpus_key_party <- corpus(corpus_key_party,text_field = "text")
+
+## Compare the tweets of republican vs to the tweets of democrat in terms of keyness
+tweet.key_party <- tokens(corpus_subset(corpus_key_party, party %in% c("democrate", "republican")),
+                          remove_punct = TRUE,
+                          remove_symbols = TRUE,
+                          remove_numbers = TRUE) %>%
+  tokens_replace(pattern=hash_lemmas$token, replacement = hash_lemmas$lemma) %>%
+  tokens_remove(pattern = c("s", "amp", "de","la", "en", "t", "u", "re", "http", stopwords("english")))
+tweet.key_party %>% dfm(groups="party") %>% textstat_keyness(target="republican") %>% textplot_keyness(n = 15, 
+                                                                                                       color = c("red", "blue"), labelcolor = "black", 
+                                                                                                       labelsize = 4, margin = 0.2)
+
+## Compare the tweets of kamala vs to the tweets of vp in terms of keyness
+tweet.key2 <- tokens(corpus_subset(corpus_key_party, screen_name %in% c("KamalaHarris", "VP")),
+                     remove_punct = TRUE,
+                     remove_symbols = TRUE,
+                     remove_numbers = TRUE) %>%
+  tokens_replace(pattern=hash_lemmas$token, replacement = hash_lemmas$lemma) %>%
+  tokens_remove(pattern = c("s", "amp", "de","la", "en", "t", "https", stopwords("english")))
+tweet.key2 %>% dfm(groups="screen_name") %>% textstat_keyness(target="KamalaHarris") %>% textplot_keyness(n = 15, 
+                                                                                                     color = c("red", "blue"), labelcolor = "black", 
+                                                                                                          labelsize = 4, margin = 0.2)
+#before after
+corpus <- read_csv("data supervised_L/corpus_final_before_after.csv")
+corpus_key_party <- corpus(corpus)
+
+tweet.key3 <- tokens(corpus_subset(corpus_key_party, when %in% c("before", "after")),
+                     remove_punct = TRUE,
+                     remove_symbols = TRUE,
+                     remove_numbers = TRUE) %>%
+  tokens_replace(pattern=hash_lemmas$token, replacement = hash_lemmas$lemma) %>%
+  tokens_remove(pattern = c("s", "amp", "de","la", "en", "t", "https", "http", "et", "co", stopwords("english")))
+tweet.key3 %>% dfm(groups="when") %>% textstat_keyness(target="before") %>% textplot_keyness(n = 15, 
+                                                                                             color = c("black", "grey"), labelcolor = "black", 
+                                                                                             labelsize = 4, margin = 0.2)

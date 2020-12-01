@@ -1,27 +1,45 @@
-#topic modelling
+# Topic modeling
+
+In this part, we use the database containing tweets from before and after the election day. When creating the corpus, we regroup all tweets from a politican in a same document. As we have six politicians, we have 6 documents in our corpus. 
+
+We proceed to the cleaning of the corpus. 
+
+
 
 ```{r message=FALSE, warning=FALSE}
 corpus_final <- read_csv("data supervised_L/corpus_final.csv")
 corpus_final <- corpus(corpus_final$text, corpus_final$screen_name)
+corpus_final <- gsub('\\b\\w{1,2}\\b','', corpus_final) #remove words whose length is smaller than 3
 
-#start with 3 dim
+#start with 4 dim
 library(quanteda)
 library(quanteda.textmodels)
 tweet.dfm <- dfm(corpus_final,
-                 remove_punct = TRUE, remove = stopwords("english"),
+                 remove_punct = TRUE, 
+                 remove_symbols = TRUE, 
+                 remove_url = TRUE,
+                 remove = stopwords("english"),
                  remove_numbers=TRUE)
+```
+
+## LSA
+
+```{r message=FALSE, warning=FALSE}
+# row.names.remove <- c("u","t","co ","https","http","s","amp","re","m","ll", "co", "we", "obama1")
+# tweet.dfm <- tweet.dfm[!(row.names(tweet.dfm) %in% row.names.remove), ]
 
 dimsetup <- textmodel_lsa(tweet.dfm, nd=4)
 
 #analyze the correlation
-ns <- apply(tweet.dfm, 1, sum) # row-sum of the DTM. Are you convinced it is the document length?
-plot(ns~dimsetup$docs[,1])
+ns <- apply(tweet.dfm, 1, sum) # row-sum of the DTM
+plot(ns~dimsetup$docs[,1], xlab = "Dimension 1", ylab = "Document length", main = "Dimension 1 versus document lenght")
 ```
 
 
 
 ```{r message=FALSE, warning=FALSE}
 
+#plot dimensions 2 and 3 
 x <- dimsetup$features[,2:3] %>% as.data.frame()
 row.names.remove <- c("u","t","co ","https","http","s","amp","re","m","ll", "co", "we", "obama1")
 x <- x[!(row.names(x) %in% row.names.remove), ]
@@ -36,37 +54,138 @@ x <- rbind(x1, x2, by=0, all=TRUE)
 x <- x[!(row.names(x) %in% row.names.remove), ]
 
 biplot(y= dimsetup$docs[,2:3],x= x, col=c("grey","red"),
-       xlab = "Dim 2", ylab="Dim 3",expand=2, xlim=c(-0.40, 0.4), ylim=c(-0.4, 0.4))
+       xlab = "Dim 2", ylab="Dim 3",expand=2, xlim=c(-0.7,0.9), ylim=c(-0.6,0.99))
 
+#plot dimensions 3 and 4
+x <- dimsetup$features[,3:4] %>% as.data.frame()
+# row.names.remove <- c("u","t","co ","https","http","s","amp","re","m","ll", "co", "we", "obama1")
+# x <- x[!(row.names(x) %in% row.names.remove), ]
+
+x1 <- x %>%
+          filter(V1>0.06 | V2>0.06)
+
+x2 <- x %>%
+          filter(V1< -0.06 | V2< -0.06) 
+
+x <- rbind(x1, x2, by=0, all=TRUE)
+x <- x[!(row.names(x) %in% row.names.remove), ]
+
+biplot(y= dimsetup$docs[,3:4],x= x, col=c("grey","red"),
+       xlab = "Dim 3", ylab="Dim 4",expand=1, xlim=c(-0.4,0.9), ylim=c(-0.4, 0.8))
+
+#extract
+row.names.remove <- c("u","t","co ","https","http","s","amp","re","m","ll", "co", "we", "obama1")
+dimsetup$features <- dimsetup$features[!(row.names(dimsetup$features) %in% row.names.remove), ]
 
 n.terms <- 10
-sort(abs(dimsetup$features[,1]), decreasing = TRUE)[1:n.terms]
-t(t(sort(dimsetup$features[,2], decreasing = TRUE)[c(1:n.terms, nrow(dimsetup$features)-c(n.terms:1)+1)]))
-t(t(sort(dimsetup$features[,3], decreasing = TRUE)[c(1:n.terms, nrow(dimsetup$features)-c(n.terms:1)+1)]))
+
+#extract words in each topic
+#topic 1
+sort(abs(dimsetup$features[,1]), decreasing = TRUE)[1:n.terms] %>% kable(col.names = NULL, caption = "Main words of topic 1") %>% kable_styling(latex_options = "striped",full_width = FALSE)
+
+#topic 2
+t(t(sort(dimsetup$features[, 2], decreasing = TRUE)[c(1:n.terms, nrow(dimsetup$features) -
+                                                        c(n.terms:1) + 1)])) %>% kable(col.names = NULL, caption = "Main words of topic 2") %>% kable_styling(latex_options = "striped",full_width = FALSE)
+#topic 3
+t(t(sort(dimsetup$features[, 3], decreasing = TRUE)[c(1:n.terms, nrow(dimsetup$features) -
+                                                        c(n.terms:1) + 1)])) %>% kable(col.names = NULL, caption = "Main words of topic 3") %>% kable_styling(latex_options = "striped",full_width = FALSE)
+#topic 4
+t(t(sort(dimsetup$features[, 4], decreasing = TRUE)[c(1:n.terms, nrow(dimsetup$features) -
+                                                        c(n.terms:1) + 1)])) %>% kable(col.names = NULL, caption = "Main words of topic 4") %>% kable_styling(latex_options = "striped",full_width = FALSE)
+```
+We repeat the same LSA process but with TF-IDF.
+
+```{r}
+tweets.tfidf <- dfm_tfidf(tweet.dfm)
+dimsetup <- textmodel_lsa(tweets.tfidf, nd=4)
+
+#analyze the correlation
+ns <- apply(tweets.tfidf, 1, sum) # row-sum of the DTM
+plot(ns~dimsetup$docs[,1])
+
+#plot dimensions 2 and 3 
+x <- dimsetup$features[,2:3] %>% as.data.frame()
+row.names.remove <- c("u","t","co ","https","http","s","amp","re","m","ll", "co", "we", "obama1", "all")
+x <- x[!(row.names(x) %in% row.names.remove), ]
+
+x1 <- x %>%
+          filter(V1>0.06 | V2>0.06)
+
+x2 <- x %>%
+          filter(V1< -0.06 | V2< -0.06) 
+
+x <- rbind(x1, x2, by=0, all=TRUE)
+x <- x[!(row.names(x) %in% row.names.remove), ]
+
+biplot(y= dimsetup$docs[,2:3],x= x, col=c("grey","red"),
+       xlab = "Dim 2", ylab="Dim 3", expand = 1)
+
+#plot dimensions 3 and 4
+x <- dimsetup$features[,3:4] %>% as.data.frame()
+# row.names.remove <- c("u","t","co ","https","http","s","amp","re","m","ll", "co", "we", "obama1")
+# x <- x[!(row.names(x) %in% row.names.remove), ]
+
+x1 <- x %>%
+          filter(V1>0.06 | V2>0.06)
+
+x2 <- x %>%
+          filter(V1< -0.06 | V2< -0.06) 
+
+x <- rbind(x1, x2, by=0, all=TRUE) 
+x <- x[!(row.names(x) %in% row.names.remove), ]
+
+biplot(y= dimsetup$docs[,3:4],x= x, col=c("grey","red"),
+       xlab = "Dim 3", ylab="Dim 4",expand=1)
+
+#extract
+row.names.remove <- c("u","t","co ","https","http","s","amp","re","m","ll", "co", "we", "obama1", "xdzz", "jill", "eoxt", "usmca", "ofa", "uoivh")
+dimsetup$features <- dimsetup$features[!(row.names(dimsetup$features) %in% row.names.remove), ]
+
+n.terms <- 10
+
+#extract words in each topic
+#topic 1
+sort(abs(dimsetup$features[,1]), decreasing = TRUE)[1:n.terms] %>% kable(col.names = NULL, caption = "Main words of topic 1") %>% kable_styling(latex_options = "striped",full_width = FALSE)
+
+#topic 2
+t(t(sort(dimsetup$features[, 2], decreasing = TRUE)[c(1:n.terms, nrow(dimsetup$features) -
+                                                        c(n.terms:1) + 1)])) %>% kable(col.names = NULL, caption = "Main words of topic 2") %>% kable_styling(latex_options = "striped",full_width = FALSE)
+#topic 3
+t(t(sort(dimsetup$features[, 3], decreasing = TRUE)[c(1:n.terms, nrow(dimsetup$features) -
+                                                        c(n.terms:1) + 1)])) %>% kable(col.names = NULL, caption = "Main words of topic 3") %>% kable_styling(latex_options = "striped",full_width = FALSE)
+#topic 4
+t(t(sort(dimsetup$features[, 4], decreasing = TRUE)[c(1:n.terms, nrow(dimsetup$features) -
+                                                        c(n.terms:1) + 1)])) %>% kable(col.names = NULL, caption = "Main words of topic 4") %>% kable_styling(latex_options = "striped",full_width = FALSE)
+
+
 ```
 
 #LDA
+
 ```{r message=FALSE, warning=FALSE}
-## LDA
 library(topicmodels)
 
 K <- 8
 tweet.dtm <- convert(tweet.dfm, to = "topicmodels")
-lda <- LDA(tweet.dfm, k = K) 
-terms(lda, 5) 
-## topics(lda, 1) # long object
+
+lda <- LDA(tweet.dtm, k = K) 
+
+terms <- terms(lda, 10)[-1,] #remove the first row composed of https word
+terms %>% kable(caption = "The words most associated with the topics") %>% kable_styling(latex_options = "striped",full_width = FALSE)
+
+topics(lda, 1) %>% kable(col.names = NULL, caption = "Topics most associated with each document") %>% kable_styling(latex_options = "striped", full_width = FALSE)
 
 ## show the betas of each document
 beta.td <- tidy(lda, matrix = "beta") # beta's are turned to proba scales
 beta.td 
 
-badwords <- c("u","t","co ","https","http","s","amp","re","m","ll", "co", "we")
+badwords <- c("u","t","co ","https","http","s","amp","re","m","ll", "co", "we", "obama1")
 beta.td <- beta.td[ !grepl(paste(badwords, collapse="|"), beta.td$term),]
 
 
 
 
-## describes the topics with their most associated terms
+#describe the topics with their most associated terms
 beta.top.terms <- beta.td %>%
   group_by(topic) %>%
   top_n(10, beta) %>%
@@ -74,14 +193,15 @@ beta.top.terms <- beta.td %>%
   arrange(topic, -beta)
 
 
-#on pourrait enlever le mot people peut-être
 beta.top.terms %>%
   mutate(term = reorder_within(term, beta, topic)) %>%
   ggplot(aes(term, beta, fill = factor(topic))) +
   geom_col(show.legend = FALSE) +
-  facet_wrap(~ topic, scales = "free") +
+  facet_wrap( ~ topic, scales = "free") +
   coord_flip() +
-  scale_x_reordered()
+  scale_x_reordered() +
+  labs(title = "Topics with their most associated terms") + ylab("Beta") +
+  xlab("Terms") 
 
 ## describes the topics in each documents
 gamma.td <- tidy(lda, matrix = "gamma")
@@ -90,65 +210,70 @@ gamma.td %>%
   geom_col(show.legend = FALSE) +
   facet_wrap(~ topic, scales = "free") +
   coord_flip() +
-  scale_x_reordered()
+  scale_x_reordered() + labs(title = "Topics with the most associated documents") + ylab("Gamma") +
+  xlab("Documents") 
+
 
 
 ```
-#word embedding
-```{r message=FALSE, warning=FALSE}
-corpus_final <- read_csv("data supervised_L/corpus_final.csv")
-corpus_final <- corpus(corpus_final$text, corpus_final$screen_name)
-
-tweet.cp <- corpus_final
-tweet.tk <- tokens(tweet.cp,
-                   remove_punct = TRUE,
-                   remove_symbols = TRUE,
-                   remove_numbers = TRUE) %>% tokens_tolower() %>%
-  tokens_replace(pattern=hash_lemmas$token, replacement = hash_lemmas$lemma) %>%
-  tokens_remove(pattern = c("s", "amp", "de","la", "en", "t","re","gsgsgh",
-                            "u","t","co ","https","http","s","amp","re","m","ll", "co", "we", stopwords("english"))) 
 
 
 
+<!-- #word embedding -->
+<!-- ```{r message=FALSE, warning=FALSE} -->
+<!-- corpus_final <- read_csv("data supervised_L/corpus_final.csv") -->
+<!-- corpus_final <- corpus(corpus_final$text, corpus_final$screen_name) -->
 
-tweet.coo <- fcm(tweet.tk, context="window", window = 5, tri=FALSE) 
+<!-- tweet.cp <- corpus_final -->
+<!-- tweet.tk <- tokens(tweet.cp, -->
+<!--                    remove_punct = TRUE, -->
+<!--                    remove_symbols = TRUE, -->
+<!--                    remove_numbers = TRUE) %>% tokens_tolower() %>% -->
+<!--   tokens_replace(pattern=hash_lemmas$token, replacement = hash_lemmas$lemma) %>% -->
+<!--   tokens_remove(pattern = c("s", "amp", "de","la", "en", "t","re","gsgsgh", -->
+<!--                             "u","t","co ","https","http","s","amp","re","m","ll", "co", "we", stopwords("english")))  -->
 
-library(text2vec)
-p <- 2 # word embedding dimension
-tweet.glove <- GlobalVectors$new(rank = p, x_max = 10) # x_max is a needed technical option
-tweet.weC <- tweet.glove$fit_transform(tweet.coo)
-tweet.we <- t(tweet.glove$components)+tweet.weC
 
-n.w <- apply(dfm(tweet.tk),2,sum) ## compute the number of times ech term is used
-index <- order(n.w, decreasing = TRUE)[1:60] # select the row-number corresponding to the 50 largest n.w
 
-plot(tweet.we[index,], type='n',  xlab="Dim 1", ylab="Dim 2")
-text(x=tweet.we[index,], labels=rownames(tweet.we[index,]))
-```
 
-```{r}
+<!-- tweet.coo <- fcm(tweet.tk, context="window", window = 5, tri=FALSE)  -->
 
-nd <- length(tweet.tk) # number of documents
-tweet.de <- matrix(nr=nd, nc=p) # document embedding matrix (1 document per row)
-for (i in 1:nd){
-  words_in_i <- tweet.we[tweet.tk[[i]],]
-  tweet.de[i,] <- apply(words_in_i,2,mean)
-}
-row.names(tweet.de) <- names(tweet.cp)
-## tweet.de
+<!-- library(text2vec) -->
+<!-- p <- 2 # word embedding dimension -->
+<!-- tweet.glove <- GlobalVectors$new(rank = p, x_max = 10) # x_max is a needed technical option -->
+<!-- tweet.weC <- tweet.glove$fit_transform(tweet.coo) -->
+<!-- tweet.we <- t(tweet.glove$components)+tweet.weC -->
 
-plot(tweet.de, type='n',  xlab="Dim 1", ylab="Dim 2", main="Centroids")
-text(x=tweet.de, labels=rownames(tweet.de))
+<!-- n.w <- apply(dfm(tweet.tk),2,sum) ## compute the number of times ech term is used -->
+<!-- index <- order(n.w, decreasing = TRUE)[1:60] # select the row-number corresponding to the 50 largest n.w -->
 
-```
+<!-- plot(tweet.we[index,], type='n',  xlab="Dim 1", ylab="Dim 2") -->
+<!-- text(x=tweet.we[index,], labels=rownames(tweet.we[index,])) -->
+<!-- ``` -->
 
-```{r}
-tweet.dtm <- dfm(tweet.tk)
-tweet.rwmd.model <- RelaxedWordMoversDistance$new(tweet.dtm, tweet.we)
-tweet.rwms <- tweet.rwmd.model$sim2(tweet.dtm)
-tweet.rwmd <- tweet.rwmd.model$dist2(tweet.dtm)
+<!-- ```{r} -->
 
-tweet.hc <- hclust(as.dist(tweet.rwmd))
-plot(tweet.hc, cex=0.8)
-```
+<!-- nd <- length(tweet.tk) # number of documents -->
+<!-- tweet.de <- matrix(nr=nd, nc=p) # document embedding matrix (1 document per row) -->
+<!-- for (i in 1:nd){ -->
+<!--   words_in_i <- tweet.we[tweet.tk[[i]],] -->
+<!--   tweet.de[i,] <- apply(words_in_i,2,mean) -->
+<!-- } -->
+<!-- row.names(tweet.de) <- names(tweet.cp) -->
+<!-- ## tweet.de -->
+
+<!-- plot(tweet.de, type='n',  xlab="Dim 1", ylab="Dim 2", main="Centroids") -->
+<!-- text(x=tweet.de, labels=rownames(tweet.de)) -->
+
+<!-- ``` -->
+
+<!-- ```{r} -->
+<!-- tweet.dtm <- dfm(tweet.tk) -->
+<!-- tweet.rwmd.model <- RelaxedWordMoversDistance$new(tweet.dtm, tweet.we) -->
+<!-- tweet.rwms <- tweet.rwmd.model$sim2(tweet.dtm) -->
+<!-- tweet.rwmd <- tweet.rwmd.model$dist2(tweet.dtm) -->
+
+<!-- tweet.hc <- hclust(as.dist(tweet.rwmd)) -->
+<!-- plot(tweet.hc, cex=0.8) -->
+<!-- ``` -->
 

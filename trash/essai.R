@@ -112,7 +112,7 @@ tweet.key2 <- tokens(corpus_subset(corpus_key_party, screen_name %in% c("KamalaH
                      remove_numbers = TRUE) %>%
   tokens_replace(pattern=hash_lemmas$token, replacement = hash_lemmas$lemma) %>%
   tokens_remove(pattern = c("s", "amp", "de","la", "en", "t", "https", stopwords("english")))
-tweet.key2 %>% dfm(groups="screen_name") %>% textstat_keyness(target="KamalaHarris") %>% textplot_keyness(n = 15, 
+tweet.key2 %>% dfm(groups="screen_name") %>% textstat_keyness(target="VP") %>% textplot_keyness(n = 15, 
                                                                                                      color = c("red", "blue"), labelcolor = "black", 
                                                                                                           labelsize = 4, margin = 0.2)
 #before after
@@ -128,3 +128,28 @@ tweet.key3 <- tokens(corpus_subset(corpus_key_party, when %in% c("before", "afte
 tweet.key3 %>% dfm(groups="when") %>% textstat_keyness(target="before") %>% textplot_keyness(n = 15, 
                                                                                              color = c("black", "grey"), labelcolor = "black", 
                                                                                              labelsize = 4, margin = 0.2)
+
+#sentiment analysis
+tweet.sent %>% group_by(screen_name, sentiment) %>%  summarize(n = n()) %>% 
+  mutate(freq = n / sum(n)) %>% ggplot(aes(x = sentiment, y = freq, fill = sentiment)) + 
+  geom_bar(stat = "identity", alpha = 0.8) + 
+  facet_wrap(~ screen_name) + coord_flip()+ ylab("sentiment")+
+  ggtitle("Sentimental Analysis by candidate ") + xlab("frequency")
+
+aggregate(value~screen_name, data=tweet.sent, FUN=mean) %>% 
+  ggplot(aes(x = screen_name, y = value)) + 
+  geom_bar(stat = "identity") + coord_flip()+
+  ggtitle("Sentimental Analysis by candidate ", subtitle = "value vased") +xlab("politician") 
+
+#cluster
+plot(TW_hc)
+
+
+
+wordsclust%>% 
+  kable(caption = "clustering", col.names = c("cluster 1", "cluster 2", "cluster 3")) %>%
+  kable_styling(
+    bootstrap_options = "striped",
+    full_width = F,
+    position = "left"
+  )

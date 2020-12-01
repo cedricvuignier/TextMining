@@ -1,30 +1,48 @@
 #similarities
 
 ```{r message=FALSE, warning=FALSE}
-corpus_final <- read_csv("data supervised_L/corpus_final.csv")
+corpus_final <- read_csv("data supervised_L/corpus_final_before_after.csv")
 
-tweet.cp <- corpus(corpus_final$text, corpus_final$screen_name)
-tweet.tfidf <- dfm_tfidf(dfm(tweet.cp, remove_punct = TRUE, remove_numbers=TRUE,
-                             remove = stopwords("english")))
 
+#create the TI-IDF matrix and remove some words 
+tweet.cp <- corpus(corpus_final$text, corpus_final$Document)
+tweet.tfidf <- dfm_tfidf(dfm(tweet.cp, remove_punct = TRUE, remove_numbers=TRUE, remove = c("u","polowczyk", "xdzz","dylan", "amp", "tune", "garland", "t","co", "https","gsfsgh","et", "http", "gsfsghkmdm", "eoxt", stopwords("english"))))
 #jaccard index
-tweet.jac <- textstat_simil(tweet.tfidf, method = "jaccard", margin = "documents")
-
-library(reshape2)
-tweet.jac.mat <- melt(as.matrix(tweet.jac)) # Convert the object to matrix then to data frame 
-ggplot(data = tweet.jac.mat, aes(x=Var1, y=Var2, fill=value))+
+TW_jacc <- textstat_simil(tweet.tfidf, method = "jaccard", margin = "documents")
+#heatmap
+TW.jac.mat <- melt(as.matrix(TW_jacc)) # Convert the object to matrix then to data frame 
+ggplot(data = TW.jac.mat, aes(x=Var1, y=Var2, fill=value))+
   scale_fill_gradient2(low = "blue", high = "red", mid = "white", 
                        midpoint = 0.5, limit = c(0,1), name="Jaccard")+
-  geom_tile() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1))
-```
+  geom_tile()
 #clustering
-```{r}
-tweet.hc <- hclust(dist(tweet.jac))
-## crude.hc <- hclust(dist(1 - crude.jac)) # use this line for Jaccard
-## crude.hc <- hclust(dist(1 - crude.cos)) # use this line for Cosine
-plot(tweet.hc)
+TW_hc <- hclust(dist(1 - TW_jacc))
+#plot
+plot(TW_hc)
+#explain the cluster
+tweet.clust <- cutree(TW_hc, k=3)
+tweet.clust <- as.data.frame(tweet.clust) %>% arrange(desc(tweet.clust))
+tweet.clust%>% 
+  kable(caption = "General statistics", col.names = c()) %>%
+  kable_styling(
+    bootstrap_options = "striped",
+    full_width = F,
+    position = "left"
+  )
 
+#extract the most used words
+tweet.clust <- cutree(TW_hc, k=3)
+wordsclust <- data.frame(
+  Clust.1 = names(sort(apply(tweet.tfidf[tweet.clust==1,],2,sum), decreasing = TRUE)[1:8]),
+  Clust.2 = names(sort(apply(tweet.tfidf[tweet.clust==2,],2,sum), decreasing = TRUE)[1:8]),
+  Clust.3 = names(sort(apply(tweet.tfidf[tweet.clust==3,],2,sum), decreasing = TRUE)[1:8])) 
 
+wordsclust%>% 
+  kable(caption = "clustering", col.names = c("cluster 1", "cluster 2", "cluster 3")) %>%
+  kable_styling(
+    bootstrap_options = "striped",
+    full_width = F,
+    position = "left"
+  )
 ```
 

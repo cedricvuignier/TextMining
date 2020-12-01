@@ -17,10 +17,10 @@ tweet.sent %>% group_by(screen_name, sentiment) %>% summarize(n = n()) %>%
   geom_bar(stat = "identity", alpha = 0.8) + 
   facet_wrap(~ screen_name) + coord_flip()
 
-tweet.sent %>% group_by(Document, sentiment) %>%  summarize(n = n()) %>% 
+tweet.sent %>% group_by(screen_name, sentiment) %>%  summarize(n = n()) %>% 
   mutate(freq = n / sum(n)) %>% ggplot(aes(x = sentiment, y = freq, fill = sentiment)) + 
   geom_bar(stat = "identity", alpha = 0.8) + 
-  facet_wrap(~ Document) + coord_flip()
+  facet_wrap(~ screen_name) + coord_flip()
 
 #the same but scale with the length
 
@@ -35,6 +35,8 @@ tweet.sent %>% group_by(Document, sentiment) %>%  summarize(n = n()) %>%
   mutate(freq = n / sum(n)) %>% ggplot(aes(x = sentiment, y = freq, fill = sentiment)) + 
   geom_bar(stat = "identity", alpha = 0.8) + 
   facet_wrap(~ Document) + coord_flip()
+
+
 ```
 
 
@@ -68,6 +70,8 @@ aggregate(value~Document, data=tweet.sent, FUN=mean)
 aggregate(value~Document, data=tweet.sent, FUN=mean) %>% 
   ggplot(aes(x = Document, y = value)) + 
   geom_bar(stat = "identity") + coord_flip()
+
+
 ```
 #using valence shifter
 je ne sais pas si c'est pertinent pour des tweets
@@ -75,8 +79,11 @@ je ne sais pas si c'est pertinent pour des tweets
 ```{r}
 library(sentimentr)
 library(lexicon)
+corpus_final <- read_csv("data supervised_L/corpus_final.csv")
 
-tweet.text <- get_sentences(corpus_final$text)
+corpus_valence <- corpus_final %>% head(2)
+
+tweet.text <- get_sentences(corpus_valence$text)
 (tweet.senti <- sentiment(tweet.text))
 
 tweet.senti <- as_tibble(tweet.senti)

@@ -1,5 +1,6 @@
-#creation of the corpus
-#similarities, VSM, CLUSERING
+# creation of the corpus
+
+### similarities, VSM, CLUSERING
 
 j'ai créé 2 corpus
 - avant / après
@@ -16,12 +17,9 @@ Trump_after_analysis <- TRUMP_all_tweet %>%
 Trump_before_analysis <- TRUMP_all_tweet %>% 
   mutate(date = date(created_at)) %>% filter(date < "2020-11-03", 
                                              display_text_width > 100)
-
-
 #add variable before or after
 Trump_after_analysis <-Trump_after_analysis %>% 
   mutate(when = "after")
-
 Trump_before_analysis <-Trump_before_analysis %>% 
   mutate(when = "before")
 #############
@@ -221,7 +219,7 @@ write.csv(corpus, "data supervised_L\\corpus.csv", row.names=FALSE)
 
 ```
 
-#clean the corpus
+### clean the corpus
 I have seen many things qui vont pas et qu'on doit nettoyer 
 ```{r}
 corpus <- read_csv("data supervised_L/corpus.csv")
@@ -241,7 +239,7 @@ corpus_final = data.frame(lapply(corpus, as.character), stringsAsFactors=FALSE)
 write.csv(corpus_final, "data supervised_L\\corpus_final_before_after.csv", row.names=FALSE)
 ```
 
-#corpus pas divisé ici on s'en fou de avant après 
+### GLOBAL CORPUS 
 
 ```{r}
 # trump analysis
@@ -314,7 +312,7 @@ write.csv(corpus_all, "data supervised_L\\corpus_final.csv", row.names=FALSE)
 
 ```
 
-#clean the corpus
+### clean the corpus
 I have seen many things qui vont pas et qu'on doit nettoyer 
 ```{r}
 corpus_final <- read_csv("data supervised_L/corpus_final.csv")

@@ -4,8 +4,6 @@ In this part, we use the database containing tweets from before and after the el
 
 We proceed to the cleaning of the corpus. 
 
-
-
 ```{r message=FALSE, warning=FALSE}
 corpus_final <- read_csv("data supervised_L/corpus_final.csv")
 corpus_final <- corpus(corpus_final$text, corpus_final$screen_name)
@@ -22,7 +20,7 @@ tweet.dfm <- dfm(corpus_final,
                  remove_numbers=TRUE)
 ```
 
-## LSA
+### LSA
 
 ```{r message=FALSE, warning=FALSE}
 # row.names.remove <- c("u","t","co ","https","http","s","amp","re","m","ll", "co", "we", "obama1")
@@ -160,7 +158,7 @@ t(t(sort(dimsetup$features[, 4], decreasing = TRUE)[c(1:n.terms, nrow(dimsetup$f
 
 ```
 
-#LDA
+### LDA
 
 ```{r message=FALSE, warning=FALSE}
 library(topicmodels)

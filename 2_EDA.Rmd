@@ -1,5 +1,6 @@
-#EDA
+# EDA
 
+###dictionary based
 ```{r}
 corpus <- read_csv("data supervised_L/corpus_final.csv")
 
@@ -24,7 +25,7 @@ tweet.fr %>% filter(word %in% index$word) %>%
 index <- tweet.fr %>% group_by(screen_name) %>% top_n(6)
 tweet.fr %>% filter(word %in% index$word) %>% ggplot(aes(word, n)) + geom_col() + coord_flip() +facet_wrap(~screen_name, ncol = 2)
 ```
-#by tf-idf
+### by tf-idf
 ```{r}
 tweet.tfidf <- bind_tf_idf(tbl=tweet.fr, term=word, document=screen_name, n=n)
 
@@ -33,13 +34,13 @@ index <- tweet.tfidf %>% group_by(screen_name) %>% top_n(2)
 tweet.tfidf %>% filter(word %in% index$word) %>% 
   ggplot(aes(word, tf_idf)) + geom_col() + coord_flip() +facet_wrap(~screen_name, ncol = 2)
 ```
-#wordcloud
+### wordcloud
 ```{r message=FALSE, warning=FALSE}
 tweet.fr <- aggregate(n~word, FUN = sum, data=tweet.fr)
 wordcloud(words=tweet.fr$word, freq=tweet.fr$n, max.words=120, random.order=FALSE, rot.per=0.35, 
           colors=brewer.pal(8, "Dark2")) 
 ```
-#Trump analysis
+### Trump analysis
 ```{r message=FALSE, warning=FALSE}
 trump <- read_csv("data supervised_L/trump_after.csv")
 trump <- trump %>% 
@@ -69,7 +70,7 @@ trump.tok %>% top_n(15) %>%
   ggplot(aes(x = n, y = reorder(word, n)))+
   geom_bar(stat = "identity")
 ```
-#biden analysis
+### biden analysis
 ```{r message=FALSE, warning=FALSE}
 biden <- read_csv("data supervised_L/biden_after.csv")
 biden <- biden %>% 
@@ -101,7 +102,7 @@ biden.tok %>% top_n(15) %>%
 ```
 
 
-#Zipf's law
+### Zipf's law
 ```{r}
 tweet.cp <- corpus(corpus$text)
 
@@ -122,7 +123,7 @@ text(frequency~rank, data=tweet.freq[1:7,], label=feature, pos=4)
 plot(log(frequency)~log(rank), data=tweet.freq, pch=20)
 text(log(frequency)~log(rank), data=tweet.freq[1:10,], label=feature, pos=4)
 ```
-#lexical diversity
+### lexical diversity
 ```{r}
 corpus <- read_csv("data supervised_L/corpus_final_before_after.csv")
 
@@ -139,7 +140,7 @@ tweet.div %>%
   ggplot(aes(x=reorder(document, I), y=I))+geom_point()+coord_flip()+
   xlab("Text") + ylab("Yule's index")
 ```
-#MATTR
+### MATTR
 ```{r}
 tweet.cp <- corpus(corpus$text, corpus$Document)
 tweet.tok <- tokens(tweet.cp,
@@ -153,8 +154,8 @@ tweet.div %>%
   ggplot(aes(x=reorder(document, MATTR), y=MATTR))+geom_point()+coord_flip()+
   xlab("Text") + ylab("MATTR")
 ```
-#x-ray plot
-#on peut jouer un moment avec ce code 
+### x-ray plot
+ 
 ```{r}
 corpus <- read_csv("data supervised_L/corpus_final.csv")
 tweet.cp <- corpus(corpus$text, corpus$screen_name)
@@ -170,7 +171,7 @@ textplot_xray(kwic(tweet.cp, pattern = "fake"),
               kwic(tweet.cp, pattern = "fraud"))
 ```
 
-#keyness
+### keyness
 ```{r message=FALSE, warning=FALSE}
 corpus <- read_csv("data supervised_L/corpus_final.csv")
 corpus <- corpus(corpus$text, corpus$screen_name)

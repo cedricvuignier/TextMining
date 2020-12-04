@@ -47,7 +47,7 @@ tweets.tokens <- tweets.tokens %>%  tokens_remove(pattern = "(?<=\\d{1,9})\\w+",
 tweets.tokens <- tweets.tokens %>% tokens_subset(ntoken(tweets.tokens) > 2) #remove sentences with less than 3 tokens
 ```
 
-## Word embedding
+### Word embedding
 
 We create a words vector representation using the GloVe method. To do it, we first need to compute the co-occurence matrix. 
 
@@ -126,7 +126,7 @@ data.frame(Clust.1 = names(sort(apply(tweets.dtm[memb == 1,], 2, sum), decreasin
 ```
 As we can see, the clustering seems more significant. For example, cluster 5 links gathers words that seem to be of Spanish origin, cluster 3 links words related to joy (birthday, happy).
 
-## Author of the tweet
+### Author of the tweet prediction
 
 We will build different models to predict the author of a tweet (y = screen_name) and compare them. 
 
@@ -436,7 +436,7 @@ draw_confusion_matrix(cm5)
 
 Just like the neural network model, the LDA is not good enough (0.68). 
 
-## Political party
+### Political party prediction
 
 Then, we repeat the previous process to predict the political party (y = party).
 

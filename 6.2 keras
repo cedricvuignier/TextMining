@@ -1,0 +1,117 @@
+
+# KERAS
+
+### set up the data 
+```{r setup, include=FALSE}
+library(tensorflow)
+library(keras)
+install_tensorflow()
+install_keras()
+
+f <- file.path(here("data supervised_L/"), c("biden_after.csv","kamala_after.csv", "trump_after.csv", "vp_after.csv", "obama_after.csv", "aoc_after.csv"))
+d <- lapply(f, read.csv)
+
+# d <- Map(cbind, d, name_abb = c("Biden", "Kamala", "Trump", "VP", "obama", "aoc"))
+
+tweet_all <- rbind(d[[1]], d[[2]], d[[3]], d[[4]],d[[5]],d[[6]])
+
+tweet_all <- tweet_all %>% select(screen_name, created_at, text, source, display_text_width, favorite_count, retweet_count)
+
+#add the political party of the author of a tweet to the dataset
+tweet_all <- tweet_all %>% mutate(party = case_when(grepl(c("realDonaldTrump|VP"), screen_name) ~ "republican", 
+                                    grepl(c("BarackObama|JoeBiden|KamalaHarris|AOC"), screen_name) ~ "democrate"))
+
+tweet_all$text <- as.character(tweet_all$text) #transform text column into character
+
+tweets.corpus <- corpus(tweet_all)
+
+tweets.corpus <- gsub('\\b\\w{1,2}\\b','', tweets.corpus) #remove tokens whose length is smaller than 3
+
+# library(lexicon)
+# library(qdapRegex)
+
+#tokenisation
+tweets.tokens <- tokens(
+  tweets.corpus,
+  remove_punct = TRUE,
+  remove_symbols = TRUE,
+  remove_url = TRUE,
+  what = "word1")
+
+ tweets.tokens <- tweets.tokens %>% tokens_replace(pattern = hash_lemmas$token, replacement =
+                                           hash_lemmas$lemma)  #use the lemmatization 
+
+ 
+tweets.tokens <- tweets.tokens %>% tokens_tolower() %>% tokens_remove(stopwords("english")) %>% tokens_remove(c("https", "t.co", "http", "amp"))
+ 
+tweets.tokens <- tweets.tokens %>%  tokens_remove(pattern = "(?<=\\d{1,9})\\w+", valuetype = "regex" ) #remove tokens containing numbers
+
+tweets.tokens <- tweets.tokens %>% tokens_subset(ntoken(tweets.tokens) > 2) #remove sentences with less than 3 tokens
+
+tw.tfidf <- dfm(tweets.tokens) %>% dfm_tfidf()
+tw.lsa <- textmodel_lsa(tw.tfidf, nd=25)
+
+```
+
+### predicted variable
+```{r}
+
+y <- factor(docvars(tweets.tokens, "party"))
+
+```
+### split the data set 
+
+```{r}
+df <- data.frame(Class=y, X=tw.lsa$docs)
+df <- cbind(df, 
+            logretweet=log10(docvars(tweets.tokens, c("retweet_count"))),
+            length = log(sapply(tweets.tokens, length)))
+
+```
+
+```{r}
+set.seed(22)
+index.tr <- sample(size=round(0.8*length(y)), x=1:length(y), replace=FALSE)
+df.tr <- df[index.tr,]
+df.te <- df[-index.tr,]
+```
+
+```{r}
+x_tr <- as.matrix(df.tr[,-1])
+y_tr <- ifelse(df.tr[,1]=="republican", 1, 0)
+x_te <- as.matrix(df.te[,-1])
+y_te <- ifelse(df.te[,1]=="republican", 1, 0)
+```
+
+### training model
+```{r}
+nb_base <- 32
+model <- keras_model_sequential() %>% 
+  layer_dense(units = nb_base, activation = "relu", input_shape = dim(x_tr)[2]) %>% 
+  layer_dense(units = nb_base, activation = "softmax") %>% 
+  layer_dense(units = nb_base, activation = "relu") %>% 
+  layer_dense(units = nb_base, activation = "softmax") %>% 
+  layer_dense(units = 1, activation = "sigmoid")
+
+summary(model)
+```
+### compile
+```{r}
+compile(model,
+  optimizer = optimizer_rmsprop(),
+  loss = "binary_crossentropy",
+  metrics = "accuracy"
+)
+```
+
+### train
+```{r}
+set.seed(23)
+history <- fit(model,
+  x_tr, y_tr,
+  epochs = 150, batch_size = 128,
+  validation_split = 0.2,
+  view_metrics=TRUE
+)
+```
+

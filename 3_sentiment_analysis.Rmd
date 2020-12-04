@@ -1,4 +1,4 @@
-#sentiment analysis
+# Sentiment analysis
 
 ```{r message=FALSE, warning=FALSE}
 
@@ -39,13 +39,7 @@ tweet.sent %>% group_by(Document, sentiment) %>%  summarize(n = n()) %>%
 
 ```
 
-
-
-
-
-
-
-# on peut voir que tousles documents doc sont positif 
+# using "afinn" 
 ```{r message=FALSE, warning=FALSE}
 tweet.sent <- tweet.tok %>%
   inner_join(get_sentiments("afinn"))
@@ -73,8 +67,10 @@ aggregate(value~Document, data=tweet.sent, FUN=mean) %>%
 
 
 ```
-#using valence shifter
-je ne sais pas si c'est pertinent pour des tweets
+
+# using valence shifter
+
+not working with our data set 
 
 ```{r}
 library(sentimentr)

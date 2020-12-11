@@ -1,7 +1,7 @@
 ---
-title: "code_prof"
-author: "Cédric Vuignier"
-date: "12/4/2020"
+title: "Text Mining- Group D"
+author: "Cédric Vuignier, Gaëtan Lovey"
+date: "`r Sys.Date()`"
 output:
   rmdformats::readthedown:
     code_folding: hide
@@ -17,86 +17,114 @@ knitr::opts_chunk$set(
 )
 ```
 
-# INTRO
+```{r include=FALSE}
+library(graphics)
+library(textclean)
+library(stringr)
+library(purrr)
+library(rlang)
+library(dplyr)
+library(tibble)
+library(syuzhet)
+library(NLP)
+library(tm)
+library(rtweet)
+library(reactable)
+library(httpuv)
+library(here)
+library(readtext)
+library(foreign)
+library(quanteda)
+library(readr)
+library(lubridate)
+library(ggplot2)
+library(kableExtra)
+library(tidyverse)
+library(tidytext)
+library(textdata)
+library(wordcloud)
+library(quanteda.textmodels)
+library(caret)
+library(ranger)
+library(lexicon)
+library(qdapRegex)
+library(text2vec)
+```
 
-### literature importante
+# Introduction
 
-- clean the tweet : https://towardsdatascience.com/text-mining-with-r-gathering-and-cleaning-data-8f8b0d65e67c 
-- set your twitter API : https://www.infoworld.com/article/3515712/how-to-search-twitter-with-rtweet-and-r.html  
-- scrapp by hashtag or region or user : https://cran.r-project.org/web/packages/rtweet/vignettes/intro.html 
+## Useful litterature
 
-### connect to API twitter
+- Clean the tweets : https://towardsdatascience.com/text-mining-with-r-gathering-and-cleaning-data-8f8b0d65e67c 
+- Set the twitter API : https://www.infoworld.com/article/3515712/how-to-search-twitter-with-rtweet-and-r.html  
+- Scrap by hashtag, region or user : https://cran.r-project.org/web/packages/rtweet/vignettes/intro.html 
 
-only run this now if the point 2 is not done yet. 
-twitter log-in (need to register the account in the pop-up windows)
+## Connect to Twitter API
+
+Twitter log-in (need to register the account in the pop-up windows)
 name : textmining13
 mdp : textmining2020
 
 ```{r message=FALSE, warning=FALSE, eval=FALSE}
 library(rtweet)
 get_token()
-
 ```
 
- no need to run the following code if you have already done this part. 
- follow the instruction to link your twitter app with your R CONSOL. Do it only once. 
+We do not need to run the following code if has been already done. 
+ 
+Follow the instructions to link your Twitter app with your R console. Do it only once. 
 ```{r message=FALSE, warning=FALSE, eval=FALSE}
-## load rtweet
+#load rtweet
 library(rtweet)
 
-## store api keys (these are fake example values; replace with your own keys)
+#store api keys 
 api_key <- "cFRZi4lsJGD4DxrtLT24za5UH"
 api_secret_key <- "iHBlU1fA5WdQ17N3udi8FWg8TlwugXb8e6c34MNRGmKXNJFIQY"
 
-## authenticate via web browser
+#authenticate via web browser
 token <- create_token(
   app = "TextMiningHEC",
   consumer_key = api_key,
   consumer_secret = api_secret_key)
-
-#verify it
-
-#token
 ```
 
-# Tweet scrcapping
+## Tweets scraping
 
 ### Get the tweets
-We collect the 3000 last tweets from TRUMP, JOE BIDEN, KAMALA HARRIS, MIKE PENCE. the DF has 90 variable. It's way too much. 
+
+We collect the 3000 last tweets from Trump, Joe Biden, Kamala Harris, Mike Pence and Alexandria Ocasio-Cortez. The data frame has 90 variables.
 
 Twitter sets a limit of 3200 tweets per request. So we have to do the same operation for each account (@).
+
 ```{r message=FALSE, warning=FALSE, eval=FALSE}
 #split the scrapping into two part to avoid the limit 
 
-#REPUCLICAN
+#republican
 tweet_trump <- get_timelines("realDonaldTrump", n = 3000, include_rts = FALSE)
 
-#vice president tweet
+#vice president tweets
 tweet_VP <- get_timelines("VP", n = 3000, include_rts = TRUE)
 
 
-#get the hastag trump
+#get the Trump hashtag
 tweet_trump_hashtag <- search_tweets(
   "#Trump", n = 3000, include_rts = FALSE
 )
 
-
-
-#########DEMOCRATE#############################
-
+#democrate
 tweet_BIDEN <- get_timelines("JoeBiden", n = 3000, 
             include_rts = FALSE)
 
-#get the hastage biden
+#get the Biden hashtag
 tweet_biden_hashtag <- search_tweets(
   "#Biden", n = 3000, include_rts = FALSE
 )
 
-#the vice president selected by biden if he is elected 
+#the vice president selected by Biden if he is elected 
 tweet_KAMALA <- get_timelines("KamalaHarris", n = 3000, 
             include_rts = FALSE)
 
-#obama
+#Obama
 tweet_OBAMA <- get_timelines("BarackObama", n = 3000, 
             include_rts = FALSE)       
 
@@ -105,22 +133,24 @@ tweet_ACO <- get_timelines("AOC", n = 3000,
             include_rts = FALSE)    
 ```
 
-# creation of the corpus
+## Creation of the corpus
 
-### similarities, VSM, CLUSERING
+We created two corpus: 
 
-j'ai créé 2 corpus
-- avant / après
-- un seul avec tous les tweets
+- Tweets from before / after the election day
+- All the tweets
+
+### Corpus of before and after the election day
+
 ```{r}
-# trump analysis
-TRUMP_all_tweet <- read_csv("data supervised_L/trump_after.csv")
+#trump analysis
+TRUMP_all_tweet <- read_csv("data/trump_after.csv")
 
 #get only the tweets after the election
 Trump_after_analysis <- TRUMP_all_tweet %>% 
   mutate(date = date(created_at)) %>% filter(date >= "2020-11-03", 
                                              display_text_width > 100)
-#get the tweet before
+#get the tweets before the election
 Trump_before_analysis <- TRUMP_all_tweet %>% 
   mutate(date = date(created_at)) %>% filter(date < "2020-11-03", 
                                              display_text_width > 100)
@@ -129,7 +159,6 @@ Trump_after_analysis <-Trump_after_analysis %>%
   mutate(when = "after")
 Trump_before_analysis <-Trump_before_analysis %>% 
   mutate(when = "before")
-#############
 
 #book of tweets "after" 
 Trump_after_analysis <- Trump_after_analysis %>% 
@@ -138,6 +167,7 @@ Trump_after_analysis <- Trump_after_analysis %>%
   summarise(paste(Trump_after_analysis$text, collapse = '. ')) 
 
 Trump_after_analysis <- rename(Trump_after_analysis, text = `paste(Trump_after_analysis$text, collapse = ". ")`)
+
 #book of tweets "before"  
 Trump_before_analysis <- Trump_before_analysis %>% 
   select(text,screen_name, when) %>% 
@@ -146,26 +176,28 @@ Trump_before_analysis <- Trump_before_analysis %>%
 
 Trump_before_analysis <- rename(Trump_before_analysis, text = `paste(Trump_before_analysis$text, collapse = ". ")`)
 
+#vice president analysis
+vp_all_tweet <- read_csv("data/vp_after.csv")
 
-# vp analysis
-vp_all_tweet <- read_csv("data supervised_L/vp_after.csv")
 #get only the tweets after the election
 vp_after_analysis <- vp_all_tweet %>% 
   mutate(date = date(created_at)) %>% 
   filter(date >= "2020-11-03",
         display_text_width > 100)
-#get the tweet before
+
+#get the tweets before the election
 vp_before_analysis <- vp_all_tweet %>% 
   mutate(date = date(created_at)) %>% 
   filter(date < "2020-11-03",
         display_text_width > 100)
+
 #add variable before or after
 vp_after_analysis <-vp_after_analysis %>% 
   mutate(when = "after")
 
 vp_before_analysis <-vp_before_analysis %>% 
   mutate(when = "before")
-#############
+
 vp_after_analysis <- vp_after_analysis %>% 
   select(text,screen_name, when) %>% 
   group_by(screen_name, when) %>% 
@@ -180,25 +212,28 @@ vp_before_analysis <- vp_before_analysis %>%
 
 vp_before_analysis <- rename(vp_before_analysis, text = `paste(vp_before_analysis$text, collapse = ". ")`)
 
-# biden analysis
-biden_all_tweet <- read_csv("data supervised_L/biden_after.csv")
+#Biden analysis
+biden_all_tweet <- read_csv("data/biden_after.csv")
+
 #get only the tweets after the election
 biden_after_analysis <- biden_all_tweet %>% 
   mutate(date = date(created_at)) %>% 
   filter(date >= "2020-11-03",
         display_text_width > 100)
-#get the tweet before
+
+#get the tweets before the election
 biden_before_analysis <- biden_all_tweet %>% 
   mutate(date = date(created_at)) %>% 
   filter(date < "2020-11-03",
         display_text_width > 100)
+
 #add variable before or after
 biden_after_analysis <-biden_after_analysis %>% 
   mutate(when = "after")
 
 biden_before_analysis <-biden_before_analysis %>% 
   mutate(when = "before")
-#############
+
 biden_after_analysis <- biden_after_analysis %>% 
   select(text,screen_name, when) %>% 
   group_by(screen_name, when) %>% 
@@ -213,25 +248,28 @@ biden_before_analysis <- biden_before_analysis %>%
 
 biden_before_analysis <- rename(biden_before_analysis, text = `paste(biden_before_analysis$text, collapse = ". ")`)
 
-# kamala analysis
-kamala_all_tweet <- read_csv("data supervised_L/kamala_after.csv")
+#Kamala Harris analysis
+kamala_all_tweet <- read_csv("data/kamala_after.csv")
+
 #get only the tweets after the election
 kamala_after_analysis <- kamala_all_tweet %>% 
   mutate(date = date(created_at)) %>% 
   filter(date >= "2020-11-03",
         display_text_width > 100)
-#get the tweet before
+
+#get the tweets before the election
 kamala_before_analysis <- kamala_all_tweet %>% 
   mutate(date = date(created_at)) %>% 
   filter(date < "2020-11-03",
         display_text_width > 100)
+
 #add variable before or after
 kamala_after_analysis <-kamala_after_analysis %>% 
   mutate(when = "after")
 
 kamala_before_analysis <-kamala_before_analysis %>% 
   mutate(when = "before")
-#############
+
 kamala_after_analysis <- kamala_after_analysis %>% 
   select(text,screen_name, when) %>% 
   group_by(screen_name, when) %>% 
@@ -246,25 +284,28 @@ kamala_before_analysis <- kamala_before_analysis %>%
 
 kamala_before_analysis <- rename(kamala_before_analysis, text = `paste(kamala_before_analysis$text, collapse = ". ")`)
 
-# obama analysis
-obama_all_tweet <- read_csv("data supervised_L/obama_after.csv")
+#Obama analysis
+obama_all_tweet <- read_csv("data/obama_after.csv")
+
 #get only the tweets after the election
 obama_after_analysis <- obama_all_tweet %>% 
   mutate(date = date(created_at)) %>% 
   filter(date >= "2020-11-03",
         display_text_width > 100)
-#get the tweet before
+
+#get the tweets before the election
 obama_before_analysis <- obama_all_tweet %>% 
   mutate(date = date(created_at)) %>% 
   filter(date < "2020-11-03",
         display_text_width > 100)
+
 #add variable before or after
 obama_after_analysis <-obama_after_analysis %>% 
   mutate(when = "after")
 
 obama_before_analysis <-obama_before_analysis %>% 
   mutate(when = "before")
-#############
+
 obama_after_analysis <- obama_after_analysis %>% 
   select(text,screen_name, when) %>% 
   group_by(screen_name, when) %>% 
@@ -279,26 +320,28 @@ obama_before_analysis <- obama_before_analysis %>%
 
 obama_before_analysis <- rename(obama_before_analysis, text = `paste(obama_before_analysis$text, collapse = ". ")`)
 
+#AOC analysis
+aoc_all_tweet <- read_csv("data/aoc_after.csv")
 
-# AOC analysis
-aoc_all_tweet <- read_csv("data supervised_L/aoc_after.csv")
 #get only the tweets after the election
 aoc_after_analysis <- aoc_all_tweet %>% 
   mutate(date = date(created_at)) %>% 
   filter(date >= "2020-11-03",
         display_text_width > 100)
-#get the tweet before
+
+#get the tweets before the election
 aoc_before_analysis <- aoc_all_tweet %>% 
   mutate(date = date(created_at)) %>% 
   filter(date < "2020-11-03",
         display_text_width > 100)
+
 #add variable before or after
 aoc_after_analysis <-aoc_after_analysis %>% 
   mutate(when = "after")
 
 aoc_before_analysis <-aoc_before_analysis %>% 
   mutate(when = "before")
-#############
+
 aoc_after_analysis <- aoc_after_analysis %>% 
   select(text,screen_name, when) %>% 
   group_by(screen_name, when) %>% 
@@ -318,39 +361,39 @@ corpus <- rbind(Trump_after_analysis, Trump_before_analysis, vp_after_analysis, 
                 obama_after_analysis, obama_before_analysis, aoc_after_analysis, aoc_before_analysis)
 corpus <- corpus %>% mutate(Document=paste(when,"_",screen_name,sep="")) 
 
-###
-#creation du corpus
+#creation of the corpus
 corpus = data.frame(lapply(corpus, as.character), stringsAsFactors=FALSE)
 
-write.csv(corpus, "data supervised_L\\corpus.csv", row.names=FALSE)
+write.csv(corpus, "data\\corpus.csv", row.names=FALSE)
 
 ```
 
-### clean the corpus
-I have seen many things qui vont pas et qu'on doit nettoyer 
+#### Cleaning of the corpus
+
 ```{r}
-corpus <- read_csv("data supervised_L/corpus.csv")
+corpus <- read_csv("data/corpus.csv")
 corpus <- corpus %>% mutate(Document=paste(when,"_",screen_name,sep="")) 
-# Set the text to lowercase
+
+#set the text to lowercase
 corpus$text <- tolower(corpus$text)
-# Remove mentions, urls, emojis, numbers, punctuations, etc.
+
+#remove mentions, urls, emojis, numbers, punctuations, etc.
 corpus$text <- gsub("@\\w+", "", corpus$text)
 corpus$text <- gsub("\\d+\\w*\\d*", "", corpus$text)
 corpus$text <- gsub("#\\w+", "", corpus$text)
 corpus$text <- gsub("[^\x01-\x7F]", "", corpus$text)
 corpus$text <- gsub("[[:punct:]]", " ", corpus$text)
 
-
 corpus_final = data.frame(lapply(corpus, as.character), stringsAsFactors=FALSE)
 
-write.csv(corpus_final, "data supervised_L\\corpus_final_before_after.csv", row.names=FALSE)
+write.csv(corpus_final, "data\\corpus_final_before_after.csv", row.names=FALSE)
 ```
 
-### GLOBAL CORPUS 
+### Global corpus (all tweets)
 
 ```{r}
-# trump analysis
-TRUMP_all_tweet <- read_csv("data supervised_L/trump_after.csv")
+#Trump analysis
+TRUMP_all_tweet <- read_csv("data/trump_after.csv")
 
 TRUMP_all_tweet <- TRUMP_all_tweet %>% 
   select(text,screen_name) %>% 
@@ -359,8 +402,8 @@ TRUMP_all_tweet <- TRUMP_all_tweet %>%
 
 TRUMP_all_tweet <- rename(TRUMP_all_tweet, text = `paste(TRUMP_all_tweet$text, collapse = " ")`)
 
-# vp analysis
-vp_all_tweet <- read_csv("data supervised_L/vp_after.csv")
+#Vice president analysis
+vp_all_tweet <- read_csv("data/vp_after.csv")
 
 vp_all_tweet <- vp_all_tweet %>% 
   select(text,screen_name) %>% 
@@ -369,8 +412,8 @@ vp_all_tweet <- vp_all_tweet %>%
 
 vp_all_tweet <- rename(vp_all_tweet, text = `paste(vp_all_tweet$text, collapse = " ")`)
 
-# biden analysis
-biden_all_tweet <- read_csv("data supervised_L/biden_after.csv")
+#Biden analysis
+biden_all_tweet <- read_csv("data/biden_after.csv")
 
 biden_all_tweet <- biden_all_tweet %>% 
   select(text,screen_name) %>% 
@@ -379,8 +422,8 @@ biden_all_tweet <- biden_all_tweet %>%
 
 biden_all_tweet <- rename(biden_all_tweet, text = `paste(biden_all_tweet$text, collapse = " ")`)
   
-# kamala analysis
-kamala_all_tweet <- read_csv("data supervised_L/kamala_after.csv")
+#Kamala Harris analysis
+kamala_all_tweet <- read_csv("data/kamala_after.csv")
 
 kamala_all_tweet <- kamala_all_tweet %>% 
   select(text,screen_name) %>% 
@@ -389,8 +432,8 @@ kamala_all_tweet <- kamala_all_tweet %>%
 
 kamala_all_tweet <- rename(kamala_all_tweet, text = `paste(kamala_all_tweet$text, collapse = " ")`)
 
-# obama analysis
-obama_all_tweet <- read_csv("data supervised_L/obama_after.csv")
+#Obama analysis
+obama_all_tweet <- read_csv("data/obama_after.csv")
 
 obama_all_tweet <- obama_all_tweet %>% 
   select(text,screen_name) %>% 
@@ -399,8 +442,8 @@ obama_all_tweet <- obama_all_tweet %>%
 
 obama_all_tweet <- rename(obama_all_tweet, text = `paste(obama_all_tweet$text, collapse = " ")`)
 
-# AOC analysis
-aoc_all_tweet <- read_csv("data supervised_L/aoc_after.csv")
+#AOC analysis
+aoc_all_tweet <- read_csv("data/aoc_after.csv")
 
 aoc_all_tweet <- aoc_all_tweet %>% 
   select(text,screen_name) %>% 
@@ -411,39 +454,38 @@ aoc_all_tweet <- rename(aoc_all_tweet, text = `paste(aoc_all_tweet$text, collaps
 
 corpus_all <- rbind(TRUMP_all_tweet, vp_all_tweet, biden_all_tweet, kamala_all_tweet, obama_all_tweet, aoc_all_tweet)
 
-###
-#creation du corpus
+#creation of the global corpus
 corpus_all = data.frame(lapply(corpus_all, as.character), stringsAsFactors=FALSE)
 
-write.csv(corpus_all, "data supervised_L\\corpus_final.csv", row.names=FALSE)
+write.csv(corpus_all, "data\\corpus_final.csv", row.names=FALSE)
 
 ```
 
-### clean the corpus
-I have seen many things qui vont pas et qu'on doit nettoyer 
+#### Cleaning the corpus
+
 ```{r}
-corpus_final <- read_csv("data supervised_L/corpus_final.csv")
-# Set the text to lowercase
+corpus_final <- read_csv("data/corpus_final.csv")
+
+#set the text to lowercase
 corpus_final$text <- tolower(corpus_final$text)
-# Remove mentions, urls, emojis, numbers, punctuations, etc.
+
+#remove mentions, urls, emojis, numbers, punctuations, etc.
 corpus_final$text <- gsub("@\\w+", "", corpus_final$text)
 corpus_final$text <- gsub("\\d+\\w*\\d*", "", corpus_final$text)
 corpus_final$text <- gsub("#\\w+", "", corpus_final$text)
 corpus_final$text <- gsub("[^\x01-\x7F]", "", corpus_final$text)
 corpus_final$text <- gsub("[[:punct:]]", " ", corpus_final$text)
 
-
 corpus_final = data.frame(lapply(corpus_final, as.character), stringsAsFactors=FALSE)
 
-write.csv(corpus_final, "data supervised_L\\corpus_final.csv", row.names=FALSE)
+write.csv(corpus_final, "data\\corpus_final.csv", row.names=FALSE)
 ```
 
 # Sentiment analysis
 
 ```{r message=FALSE, warning=FALSE}
-
-corpus_final_before_after <- read_csv("data supervised_L/corpus_final_before_after.csv")
-corpus_final <- read_csv("data supervised_L/corpus_final.csv")
+corpus_final_before_after <- read_csv("data/corpus_final_before_after.csv")
+corpus_final <- read_csv("data/corpus_final.csv")
 
 tweet.tb <- as_tibble(data.frame(corpus_final))
 tweet.tok <- unnest_tokens(tweet.tb, output="word", input="text", to_lower=TRUE, strip_punct=TRUE, 
@@ -462,8 +504,7 @@ tweet.sent %>% group_by(screen_name, sentiment) %>%  summarize(n = n()) %>%
   geom_bar(stat = "identity", alpha = 0.8) + 
   facet_wrap(~ screen_name) + coord_flip()
 
-#the same but scale with the length
-
+#scaling with the length
 tweet.tb <- as_tibble(data.frame(corpus_final_before_after))
 tweet.tok <- unnest_tokens(tweet.tb, output="word", input="text", to_lower=TRUE, strip_punct=TRUE, 
                            strip_numeric=TRUE)
@@ -476,30 +517,30 @@ tweet.sent %>% group_by(Document, sentiment) %>%  summarize(n = n()) %>%
   geom_bar(stat = "identity", alpha = 0.8) + 
   facet_wrap(~ Document) + coord_flip()
 
-
 ```
 
-### using "afinn"  - value based
+## Value based (afinn)
 ```{r message=FALSE, warning=FALSE}
 tweet.sent <- tweet.tok %>%
   inner_join(get_sentiments("afinn"))
-## Summarize per document (value average) + barplot
-aggregate(value~screen_name, data=tweet.sent, FUN=mean)
 
+#summarize per document (value average) + barplot
+aggregate(value~screen_name, data=tweet.sent, FUN=mean)
 
 aggregate(value~screen_name, data=tweet.sent, FUN=mean) %>% 
   ggplot(aes(x = screen_name, y = value)) + 
   geom_bar(stat = "identity") + coord_flip()
-######################before after#######################
+
+#before and after the election day
 tweet.tb <- as_tibble(data.frame(corpus_final_before_after))
 tweet.tok <- unnest_tokens(tweet.tb, output="word", input="text", to_lower=TRUE, strip_punct=TRUE, 
                            strip_numeric=TRUE)
 
 tweet.sent <- tweet.tok %>%
   inner_join(get_sentiments("afinn"))
-## Summarize per document (value average) + barplot
-aggregate(value~Document, data=tweet.sent, FUN=mean)
 
+#summarize per document (value average) + barplot
+aggregate(value~Document, data=tweet.sent, FUN=mean)
 
 aggregate(value~Document, data=tweet.sent, FUN=mean) %>% 
   ggplot(aes(x = Document, y = value)) + 
@@ -508,14 +549,15 @@ aggregate(value~Document, data=tweet.sent, FUN=mean) %>%
 
 ```
 
-### using valence shifter
+## Valence shifter
 
-not working with our data set 
+It is not working with our dataset.
 
 ```{r}
 library(sentimentr)
 library(lexicon)
-corpus_final <- read_csv("data supervised_L/corpus_final.csv")
+
+corpus_final <- read_csv("data/corpus_final.csv")
 
 corpus_valence <- corpus_final %>% head(2)
 
@@ -524,34 +566,40 @@ tweet.text <- get_sentences(corpus_valence$text)
 
 tweet.senti <- as_tibble(tweet.senti)
 
-tweet.senti %>% group_by(element_id) %>% 
-  ggplot(aes(x = sentence_id, y = sentiment)) + 
-  geom_line() + 
-  facet_wrap(~ element_id) 
+tweet.senti %>% group_by(element_id) %>%
+    ggplot(aes(x = sentence_id, y = sentiment)) +
+    geom_line() +
+    facet_wrap( ~ element_id) 
 ```
 
-# similarities
+# Similarities
 
-### jaccard index
+## Jaccard index
+
 ```{r message=FALSE, warning=FALSE}
-corpus_final <- read_csv("data supervised_L/corpus_final_before_after.csv")
-
+corpus_final <- read_csv("data/corpus_final_before_after.csv")
 
 #create the TI-IDF matrix and remove some words 
 tweet.cp <- corpus(corpus_final$text, corpus_final$Document)
 tweet.tfidf <- dfm_tfidf(dfm(tweet.cp, remove_punct = TRUE, remove_numbers=TRUE, remove = c("u","polowczyk", "xdzz","dylan", "amp", "tune", "garland", "t","co", "https","gsfsgh","et", "http", "gsfsghkmdm", "eoxt", stopwords("english"))))
+
 #jaccard index
 TW_jacc <- textstat_simil(tweet.tfidf, method = "jaccard", margin = "documents")
+
 #heatmap
+library(reshape)
 TW.jac.mat <- melt(as.matrix(TW_jacc)) # Convert the object to matrix then to data frame 
-ggplot(data = TW.jac.mat, aes(x=Var1, y=Var2, fill=value))+
+ggplot(data = TW.jac.mat, aes(x=X1, y=X2, fill=value))+
   scale_fill_gradient2(low = "blue", high = "red", mid = "white", 
                        midpoint = 0.5, limit = c(0,1), name="Jaccard")+
   geom_tile()
+
 #clustering
 TW_hc <- hclust(dist(1 - TW_jacc))
+
 #plot
 plot(TW_hc)
+
 #explain the cluster
 tweet.clust <- cutree(TW_hc, k=3)
 tweet.clust <- as.data.frame(tweet.clust) %>% arrange(desc(tweet.clust))
@@ -581,16 +629,15 @@ wordsclust%>%
 
 # Topic modeling
 
-In this part, we use the database containing tweets from before and after the election day. When creating the corpus, we regroup all tweets from a politican in a same document. As we have six politicians, we have 6 documents in our corpus. 
+In this part, we use the database containing tweets from before and after the election day. When creating the corpus, we regroup all tweets from a politican in a same document. As we have six politicians, we have six documents in our corpus. 
 
 We proceed to the cleaning of the corpus. 
 
 ```{r message=FALSE, warning=FALSE}
-corpus_final <- read_csv("data supervised_L/corpus_final.csv")
+corpus_final <- read_csv("data/corpus_final.csv")
 corpus_final <- corpus(corpus_final$text, corpus_final$screen_name)
 corpus_final <- gsub('\\b\\w{1,2}\\b','', corpus_final) #remove words whose length is smaller than 3
 
-#start with 4 dim
 library(quanteda)
 library(quanteda.textmodels)
 tweet.dfm <- dfm(corpus_final,
@@ -601,12 +648,9 @@ tweet.dfm <- dfm(corpus_final,
                  remove_numbers=TRUE)
 ```
 
-### LSA
+## LSA
 
 ```{r message=FALSE, warning=FALSE}
-# row.names.remove <- c("u","t","co ","https","http","s","amp","re","m","ll", "co", "we", "obama1")
-# tweet.dfm <- tweet.dfm[!(row.names(tweet.dfm) %in% row.names.remove), ]
-
 dimsetup <- textmodel_lsa(tweet.dfm, nd=4)
 
 #analyze the correlation
@@ -614,10 +658,9 @@ ns <- apply(tweet.dfm, 1, sum) # row-sum of the DTM
 plot(ns~dimsetup$docs[,1], xlab = "Dimension 1", ylab = "Document length", main = "Dimension 1 versus document lenght")
 ```
 
- using TF
+### LSA with TF 
 
 ```{r message=FALSE, warning=FALSE}
-
 #plot dimensions 2 and 3 
 x <- dimsetup$features[,2:3] %>% as.data.frame()
 row.names.remove <- c("u","t","co ","https","http","s","amp","re","m","ll", "co", "we", "obama1")
@@ -637,8 +680,6 @@ biplot(y= dimsetup$docs[,2:3],x= x, col=c("grey","red"),
 
 #plot dimensions 3 and 4
 x <- dimsetup$features[,3:4] %>% as.data.frame()
-# row.names.remove <- c("u","t","co ","https","http","s","amp","re","m","ll", "co", "we", "obama1")
-# x <- x[!(row.names(x) %in% row.names.remove), ]
 
 x1 <- x %>%
           filter(V1>0.06 | V2>0.06)
@@ -672,6 +713,9 @@ t(t(sort(dimsetup$features[, 3], decreasing = TRUE)[c(1:n.terms, nrow(dimsetup$f
 t(t(sort(dimsetup$features[, 4], decreasing = TRUE)[c(1:n.terms, nrow(dimsetup$features) -
                                                         c(n.terms:1) + 1)])) %>% kable(col.names = NULL, caption = "Main words of topic 4") %>% kable_styling(latex_options = "striped",full_width = FALSE)
 ```
+
+### LSA with TF-IDF
+
 We repeat the same LSA process but with TF-IDF.
 
 ```{r}
@@ -701,8 +745,6 @@ biplot(y= dimsetup$docs[,2:3],x= x, col=c("grey","red"),
 
 #plot dimensions 3 and 4
 x <- dimsetup$features[,3:4] %>% as.data.frame()
-# row.names.remove <- c("u","t","co ","https","http","s","amp","re","m","ll", "co", "we", "obama1")
-# x <- x[!(row.names(x) %in% row.names.remove), ]
 
 x1 <- x %>%
           filter(V1>0.06 | V2>0.06)
@@ -735,15 +777,12 @@ t(t(sort(dimsetup$features[, 3], decreasing = TRUE)[c(1:n.terms, nrow(dimsetup$f
 #topic 4
 t(t(sort(dimsetup$features[, 4], decreasing = TRUE)[c(1:n.terms, nrow(dimsetup$features) -
                                                         c(n.terms:1) + 1)])) %>% kable(col.names = NULL, caption = "Main words of topic 4") %>% kable_styling(latex_options = "striped",full_width = FALSE)
-
-
 ```
 
-### LDA
+## LDA
 
 ```{r message=FALSE, warning=FALSE}
 library(topicmodels)
-
 K <- 8
 tweet.dtm <- convert(tweet.dfm, to = "topicmodels")
 
@@ -754,15 +793,12 @@ terms %>% kable(caption = "The words most associated with the topics") %>% kable
 
 topics(lda, 1) %>% kable(col.names = NULL, caption = "Topics most associated with each document") %>% kable_styling(latex_options = "striped", full_width = FALSE)
 
-## show the betas of each document
+#show the betas of each document
 beta.td <- tidy(lda, matrix = "beta") # beta's are turned to proba scales
 beta.td 
 
 badwords <- c("u","t","co ","https","http","s","amp","re","m","ll", "co", "we", "obama1")
 beta.td <- beta.td[ !grepl(paste(badwords, collapse="|"), beta.td$term),]
-
-
-
 
 #describe the topics with their most associated terms
 beta.top.terms <- beta.td %>%
@@ -770,7 +806,6 @@ beta.top.terms <- beta.td %>%
   top_n(10, beta) %>%
   ungroup() %>%
   arrange(topic, -beta)
-
 
 beta.top.terms %>%
   mutate(term = reorder_within(term, beta, topic)) %>%
@@ -782,7 +817,7 @@ beta.top.terms %>%
   labs(title = "Topics with their most associated terms") + ylab("Beta") +
   xlab("Terms") 
 
-## describes the topics in each documents
+#describe the topics in each document
 gamma.td <- tidy(lda, matrix = "gamma")
 gamma.td %>%
   ggplot(aes(document, gamma, fill = factor(topic))) +
@@ -791,83 +826,18 @@ gamma.td %>%
   coord_flip() +
   scale_x_reordered() + labs(title = "Topics with the most associated documents") + ylab("Gamma") +
   xlab("Documents") 
-
-
-
 ```
-
-
-
-<!-- #word embedding -->
-<!-- ```{r message=FALSE, warning=FALSE} -->
-<!-- corpus_final <- read_csv("data supervised_L/corpus_final.csv") -->
-<!-- corpus_final <- corpus(corpus_final$text, corpus_final$screen_name) -->
-
-<!-- tweet.cp <- corpus_final -->
-<!-- tweet.tk <- tokens(tweet.cp, -->
-<!--                    remove_punct = TRUE, -->
-<!--                    remove_symbols = TRUE, -->
-<!--                    remove_numbers = TRUE) %>% tokens_tolower() %>% -->
-<!--   tokens_replace(pattern=hash_lemmas$token, replacement = hash_lemmas$lemma) %>% -->
-<!--   tokens_remove(pattern = c("s", "amp", "de","la", "en", "t","re","gsgsgh", -->
-<!--                             "u","t","co ","https","http","s","amp","re","m","ll", "co", "we", stopwords("english")))  -->
-
-
-
-
-<!-- tweet.coo <- fcm(tweet.tk, context="window", window = 5, tri=FALSE)  -->
-
-<!-- library(text2vec) -->
-<!-- p <- 2 # word embedding dimension -->
-<!-- tweet.glove <- GlobalVectors$new(rank = p, x_max = 10) # x_max is a needed technical option -->
-<!-- tweet.weC <- tweet.glove$fit_transform(tweet.coo) -->
-<!-- tweet.we <- t(tweet.glove$components)+tweet.weC -->
-
-<!-- n.w <- apply(dfm(tweet.tk),2,sum) ## compute the number of times ech term is used -->
-<!-- index <- order(n.w, decreasing = TRUE)[1:60] # select the row-number corresponding to the 50 largest n.w -->
-
-<!-- plot(tweet.we[index,], type='n',  xlab="Dim 1", ylab="Dim 2") -->
-<!-- text(x=tweet.we[index,], labels=rownames(tweet.we[index,])) -->
-<!-- ``` -->
-
-<!-- ```{r} -->
-
-<!-- nd <- length(tweet.tk) # number of documents -->
-<!-- tweet.de <- matrix(nr=nd, nc=p) # document embedding matrix (1 document per row) -->
-<!-- for (i in 1:nd){ -->
-<!--   words_in_i <- tweet.we[tweet.tk[[i]],] -->
-<!--   tweet.de[i,] <- apply(words_in_i,2,mean) -->
-<!-- } -->
-<!-- row.names(tweet.de) <- names(tweet.cp) -->
-<!-- ## tweet.de -->
-
-<!-- plot(tweet.de, type='n',  xlab="Dim 1", ylab="Dim 2", main="Centroids") -->
-<!-- text(x=tweet.de, labels=rownames(tweet.de)) -->
-
-<!-- ``` -->
-
-<!-- ```{r} -->
-<!-- tweet.dtm <- dfm(tweet.tk) -->
-<!-- tweet.rwmd.model <- RelaxedWordMoversDistance$new(tweet.dtm, tweet.we) -->
-<!-- tweet.rwms <- tweet.rwmd.model$sim2(tweet.dtm) -->
-<!-- tweet.rwmd <- tweet.rwmd.model$dist2(tweet.dtm) -->
-
-<!-- tweet.hc <- hclust(as.dist(tweet.rwmd)) -->
-<!-- plot(tweet.hc, cex=0.8) -->
-<!-- ``` -->
 
 
 # Supervised learning
 
 In this part, we will use the whole set of data which includes the tweets before and after the election. We would like to predict the person who wrote those tweets and also his political party. 
 
-At the beginning, we add the variable corresponding to the political party of the tweet's writer. We also create a new varible with the abbreviation of the name of the tweet's writers. Then, we create a corpus and clean it. We use the lemmatization method in the tokenisation process. 
+At the beginning, we add the variable corresponding to the political party of the tweet's writer. We also create a new variable with the abbreviation of the name of the tweet's writers. Then, we create a corpus and clean it. We use the lemmatization method in the tokenisation process. 
 
 ```{r include=FALSE}
-f <- file.path(here("data supervised_L/"), c("biden_after.csv","kamala_after.csv", "trump_after.csv", "vp_after.csv", "obama_after.csv", "aoc_after.csv"))
+f <- file.path(here("data/"), c("biden_after.csv","kamala_after.csv", "trump_after.csv", "vp_after.csv", "obama_after.csv", "aoc_after.csv"))
 d <- lapply(f, read.csv)
-
-# d <- Map(cbind, d, name_abb = c("Biden", "Kamala", "Trump", "VP", "obama", "aoc"))
 
 tweet_all <- rbind(d[[1]], d[[2]], d[[3]], d[[4]],d[[5]],d[[6]])
 
@@ -883,9 +853,6 @@ tweets.corpus <- corpus(tweet_all)
 
 tweets.corpus <- gsub('\\b\\w{1,2}\\b','', tweets.corpus) #remove tokens whose length is smaller than 3
 
-# library(lexicon)
-# library(qdapRegex)
-
 #tokenisation
 tweets.tokens <- tokens(
   tweets.corpus,
@@ -897,7 +864,6 @@ tweets.tokens <- tokens(
  tweets.tokens <- tweets.tokens %>% tokens_replace(pattern = hash_lemmas$token, replacement =
                                            hash_lemmas$lemma)  #use the lemmatization 
 
- 
 tweets.tokens <- tweets.tokens %>% tokens_tolower() %>% tokens_remove(stopwords("english")) %>% tokens_remove(c("https", "t.co", "http", "amp"))
  
 tweets.tokens <- tweets.tokens %>%  tokens_remove(pattern = "(?<=\\d{1,9})\\w+", valuetype = "regex" ) #remove tokens containing numbers
@@ -922,9 +888,9 @@ twitter.glove <- tweets.we + t(word_vectors_context) #match central vectors and 
 nwords <- apply(dfm(tweets.tokens), 2, sum) #number of times each term is used (frequency)
 index <- order(nwords, decreasing = TRUE)[1:100] #100 largest number of words
 plot(tweets.we[index,], type ="n", xlab="Dim1", ylab="Dim2", main = "The 100 most frequent words") #plot the 100 most frequent words in the corpus
+
 text(x=tweets.we[index,], labels = rownames(tweets.we[index,]))
 ```
-
 
 Because the cluster is completely illegible, we display the 10 most frequent words in 5 clusters. Clusters are computed using the RelaxedWordMoversDistance (RWMD)
 
@@ -946,7 +912,6 @@ data.frame(Clust.1 = names(sort(apply(tweets.dtm[memb == 1,], 2, sum), decreasin
 ```
 
 Below, we repeat the same process but with 25 word embedding dimensions. To illustrate it, we display the 10 most frequent words in 5 clusters. 
-
 
 ```{r}
 p <- 25 #word embedding dimension
@@ -982,28 +947,22 @@ data.frame(Clust.1 = names(sort(apply(tweets.dtm[memb == 1,], 2, sum), decreasin
            Clust.4 = names(sort(apply(tweets.dtm[memb == 4,], 2, sum), decreasing = TRUE)[1:10]),
            Clust.5 = names(sort(apply(tweets.dtm[memb == 5,], 2, sum), decreasing = TRUE)[1:10]))
 ```
+
 As we can see, the clustering seems more significant. For example, cluster 5 links gathers words that seem to be of Spanish origin, cluster 3 links words related to joy (birthday, happy).
 
 ### Author of the tweet prediction
 
 We will build different models to predict the author of a tweet (y = screen_name) and compare them. 
 
-1. TF + LSA 
+#### TF + LSA 
 
 ```{r include=FALSE}
 y <- factor(docvars(tweets.tokens, "screen_name")) #who wrote the tweet is the variable to predict
 
 tweets.dfm <- dfm(tweets.tokens)
-# dim(tweets.dfm)
-
-# library(quanteda.textmodels)
-# library(caret)
-# library(ranger)
 
 set.seed(2020)
 index.tr <- sample(size=round(0.8*length(y)), x=c(1:length(y)), replace=FALSE) #we split the data into a training set and a test set
-# df.tr <- df[index.tr,]
-# df.te <- df[-index.tr,]
 
 nd.vec <- c(2,5,25,50,100, 500, 1000) #because our matrix is well too big, we apply a reduction dimension technique such as the LSA one
 
@@ -1023,7 +982,6 @@ for (j in 1:length(nd.vec)){
   acc.vec[j] <- confusionMatrix(data=pred.te$predictions, reference = df.te$Class)$overall[1]
 }
 
-
 acc.vec
 
 plot(acc.vec ~ nd.vec, type='b', main = "LSA on a DTM matrix composed by the word frequency", ylab = "Accuracy", xlab = "Number of LSA dimensions") #500 dimensions has the best accuracy
@@ -1031,8 +989,7 @@ plot(acc.vec ~ nd.vec, type='b', main = "LSA on a DTM matrix composed by the wor
 
 We found an accuracy of 0.6861423. This score is related to a LSA of 500 dimensions. 
 
-
-2. TF-IDF + LSA
+#### TF-IDF + LSA
 
 ```{r}
 tweets.tfidf <- dfm_tfidf(tweets.dfm)
@@ -1057,13 +1014,13 @@ for (j in 1:length(nd.vec)){
 
 acc.vec
 plot(acc.vec ~ nd.vec, type='b', main = "LSA with TF-IDF", ylab = "Accuracy", xlab = "Number of LSA dimensions") #50 dimensions has the best accuracy
-
 ```
+
 As we can see, accuracy is better when using TF-IDF with LSA of 50 dimensions (0.7382022). 
 
-3. Word embedding + centroids
+#### Word embedding + centroids
 
-We compute the centroids in order to transform the word embedding to a document embedding. 
+We compute the centroids in order to transform the word embedding into a document embedding. 
 
 We start with the two dimensions word embedding from the previous part. 
 
@@ -1085,7 +1042,6 @@ row.names(centers) <- names(tweets.tokens) #name the columns of the centroid mat
 
 plot(x = centers, type ="n", xlab="Dim1", ylab="Dim2", main = "Centroids") #plot the centroids
 text(centers, labels = rownames(centers))
-
 ```
 
 ```{r}
@@ -1094,14 +1050,14 @@ df.tr <- df[index.tr,]
 df.te <- df[-index.tr,]
 set.seed(2020)
 
-
 tweets.fit <- ranger(Class ~ .,
                      data = df.tr)
 
 pred.te <- predict(tweets.fit, df.te)
 confusionMatrix(data=pred.te$predictions, reference = df.te$Class)
 ```
-With an accuracy of 0.2764, the cendroids coming from the word embedding part (two dimensions word embedding) are very bad for the prediction model. We could try to use more word embedding dmensions in order to see if we get better results. We set the dimensions of word embedding to 25. 
+
+With an accuracy of 0.2764, the cendroids coming from the word embedding part (two dimensions word embedding) are very bad for the prediction model. We could try to use more word embedding dimensions in order to see if we get better results. We set the dimensions of word embedding to 25. 
 
 ```{r}
 tweets_coo <- fcm(tweets.tokens, context = "window", window = 5, tri = FALSE)
@@ -1178,13 +1134,13 @@ draw_confusion_matrix <- function(cm) {
 }  
 
 draw_confusion_matrix(cm1)
-
 ```
+
 With 25 dimensions, we get an accuracy of 0.621 which is better than when using only two dimensions in word embedding. We will keep using 25 dimensions in order to limit the computational time for the following.
 
 TF-IDF is doing better. Now, we will try to combine the centroids with TF-IDF in order to see if we can improve accuracy. 
 
-4. Combining centroids with TF-IDF + LSA 
+#### Combining centroids with TF-IDF + LSA 
 
 
 ```{r}
@@ -1204,15 +1160,13 @@ tweets.fit <- ranger(Class ~ .,
 pred.te <- predict(tweets.fit, df.te)
 cm2 <- confusionMatrix(data=pred.te$predictions, reference = df.te$Class)
 draw_confusion_matrix(cm2)
-
 ```
-The combination of features (TF-IDF + LSA + Centroids) (0.7367) does not surpass the prediction made with the TF-IDF and LSA (0.7382022). 
 
+The combination of features (TF-IDF + LSA + Centroids) (0.7367) does not surpass the predictions made with the TF-IDF and LSA (0.7382022). 
 
 For the following, we will keep this last combination of features (TF-IDF + LSA + Centroids) to compare the results with different models.
 
-
-5. Support vector machine (SVM)
+#### Support vector machine (SVM) with centroids + TF-IDF + LSA 
 
 ```{r}
 is.na(df) <- sapply(df, is.infinite) #transform infinite values into NA 
@@ -1239,9 +1193,10 @@ pred.te <- predict(tweets.fit, df.te)
 cm3 <-  confusionMatrix(data=pred.te$predictions, reference = df.te$Class)
 draw_confusion_matrix(cm3)
 ```
+
 The SVM model, with an accuracy of 0.8472, is doing a great job in comparison to the random forest model.
 
-6. Neural network (NN)
+#### Neural network (NN) with centroids + TF-IDF + LSA 
 
 In order to avoid overfitting, we will use a weight decay to penalise the largest weights. We will also tune the size of the neural networks to find the opimal one.
 
@@ -1267,11 +1222,11 @@ tweets.fit <- train(
 pred.te <- predict(tweets.fit, newdata = df.te)
 cm4 <- confusionMatrix(data=pred.te, reference = df.te$Class)
 draw_confusion_matrix(cm4)
-
 ```
+
 The accuracy of 0.671 is really disappointing. The neural network model should not be used to predict the author of a tweet. 
 
-7. Linear discriminant analysis (LDA)
+#### Linear discriminant analysis (LDA) with centroids + TF-IDF + LSA 
 
 ```{r}
 train_control <- trainControl(method = "cv", number = 5)
@@ -1298,8 +1253,8 @@ Just like the neural network model, the LDA is not good enough (0.68).
 
 Then, we repeat the previous process to predict the political party (y = party).
 
+#### TF + LSA 
 
-1. TF + LSA 
 ```{r include=FALSE}
 #we add new features for our model
 y <- factor(docvars(tweets.tokens, "party")) #political party is the variable to predict
@@ -1327,10 +1282,11 @@ plot(acc.vec ~ nd.vec, type='b',  main = "LSA on a DTM matrix composed by the wo
 
 acc.vec
 ```
+
 The best accuracy (0.8576779) is found with a LSA of 50 dimensions. 
 
 
-2. TF-IDF + LSA
+#### TF-IDF + LSA
 
 ```{r}
 tweets.tfidf <- dfm_tfidf(tweets.dfm)
@@ -1355,11 +1311,11 @@ for (j in 1:length(nd.vec)){
 
 acc.vec
 plot(acc.vec ~ nd.vec, type='b', main = "LSA with TF-IDF", ylab = "Accuracy", xlab = "Number of LSA dimensions") #50 dimensions has the best accuracy
-
 ```
+
 The random forest trained on a TF-IDF with a LSA of 50 dimensions get an accuracy of 0.8928839 which is better than with TF. Therefore, we will continue with the TF-IDF. 
 
-3. Word embedding + centroids
+#### Word embedding + centroids
 
 ```{r}
 p <- 25 #word embedding dimension
@@ -1387,12 +1343,12 @@ tweets.fit <- ranger(Class ~ .,
 pred.te <- predict(tweets.fit, df.te)
 cm6 <- confusionMatrix(data=pred.te$predictions, reference = df.te$Class)
 draw_confusion_matrix(cm6)
-
 ```
+
 The random forest trained on the centroids do quite a good job (0.848). Therefore, centroids can be combined with other features to improve the model. 
 
 
-4. Combining centroids with TF-IDF + LSA 
+#### Combining centroids with TF-IDF + LSA 
 
 ```{r}
 tweets.tfidf <- dfm_tfidf(tweets.dfm) #TF-IDF
@@ -1411,12 +1367,11 @@ tweets.fit <- ranger(Class ~ .,
 pred.te <- predict(tweets.fit, df.te)
 cm7 <- confusionMatrix(data=pred.te$predictions, reference = df.te$Class)
 draw_confusion_matrix(cm7)
-
 ```
 
 With an accuracy of 0.885, we can conclude that centroids do not improve our TF-IDF + LSA model. 
 
-5. Support vector machine (SVM)
+#### Support vector machine (SVM) with centroids + TF-IDF + LSA 
 
 ```{r}
 is.na(df) <- sapply(df, is.infinite) #transform infinite values into NA 
@@ -1446,7 +1401,7 @@ draw_confusion_matrix(cm8)
 
 SVM is doing a great job with an accuracy of 0.964 In addition, there is a high specificity and a high sensitivity which are quite well balanced.
 
-6. Neural network (NN)
+#### Neural network (NN) with centroids + TF-IDF + LSA 
 
 ```{r}
 hp_nn <- expand.grid(size = 2:10,
@@ -1470,9 +1425,9 @@ cm9 <- confusionMatrix(data=pred.te, reference = df.te$Class)
 draw_confusion_matrix(cm9)
 ```
 
-Accuracy = 0.893
+Accuracy : 0.893
 
-7. Linear discriminant analysis (LDA)
+#### Linear discriminant analysis (LDA) with centroids + TF-IDF + LSA 
 
 ```{r}
 train_control <- trainControl(method = "cv", number = 5)
@@ -1487,11 +1442,10 @@ tweets.fit <- train(
   metric = metric,
   na.action=na.exclude)
 
-
 pred.te <- predict(tweets.fit, newdata = df.te)
 cm10 <- confusionMatrix(data=pred.te, reference = df.te$Class)
 draw_confusion_matrix(cm10)
 ```
 
 
-Accuracy = 0.87
+Accuracy : 0.87
